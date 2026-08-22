@@ -1,0 +1,2066 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* ==========================================================================
+   Tactile Light Claymorphism Design System Styles
+   ========================================================================== */
+
+/* Soft, puffy clay cards - over-ride dark classes with escaped and attribute selectors */
+.clay-card,
+[class*="bg-gray-900"],
+[class*="bg-gray-950"],
+[class*="bg-[#0f0f12]"],
+[class*="bg-[#0a0a0c]"],
+[class*="bg-[#121215]"],
+[class*="bg-[#131316]"],
+[class*="bg-[#111114]"] {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1.5px solid rgba(203, 213, 225, 0.75) !important;
+  border-radius: 24px !important;
+  box-shadow: 
+    0px 12px 30px rgba(100, 116, 139, 0.16), 
+    0px 2px 4px rgba(100, 116, 139, 0.08),
+    inset -6px -6px 14px rgba(148, 163, 184, 0.18), 
+    inset 6px 6px 14px rgba(255, 255, 255, 0.95) !important;
+  color: #1e293b !important;
+}
+
+/* Active/selected tactile states */
+.clay-card-active,
+.bg-blue-600\/10,
+.bg-\[\#1e1e2a\],
+.bg-gray-950\/90 {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 
+    0px 12px 24px rgba(59, 130, 246, 0.12), 
+    inset -4px -4px 10px rgba(148, 163, 184, 0.15), 
+    inset 4px 4px 10px rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Hover scales for cards */
+.clay-card-hover,
+.hover\:border-gray-600:hover,
+.hover\:border-yellow-500\/35:hover,
+.hover\:border-blue-500\/35:hover {
+  transition: all 0.28s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.clay-card-hover:hover,
+.hover\:border-gray-600:hover,
+.hover\:border-yellow-500\/35:hover,
+.hover\:border-blue-500\/35:hover {
+  transform: translateY(-4px) scale(1.01) !important;
+  box-shadow: 
+    0px 18px 36px rgba(148, 163, 184, 0.35), 
+    inset -6px -6px 14px rgba(148, 163, 184, 0.12), 
+    inset 6px 6px 14px rgba(255, 255, 255, 0.99) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Inset panels acted like soft carved-in wells (sinks) */
+.clay-inset-panel,
+.clay-inset-panel-deep,
+.bg-black\/45,
+.bg-black\/40,
+.bg-\[\#0a0a0f\]\/40,
+.bg-\[\#08080c\],
+.bg-\[\#0a0a0c\]\/50,
+.bg-gray-950\/20,
+.bg-gray-950\/30,
+.bg-gray-900\/20,
+.bg-gray-800\/20,
+.bg-gray-800\/30,
+.bg-gray-800\/50 {
+  background: rgba(234, 241, 250, 0.55) !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 
+    inset 4px 4px 8px rgba(148, 163, 184, 0.38), 
+    inset -3px -3px 8px rgba(255, 255, 255, 0.85) !important;
+  color: #1e293b !important;
+}
+
+/* Special styling for progress tracks to make them beautiful inner clay channels */
+div.bg-gray-800,
+div.bg-gray-700,
+.bg-gray-800\/50 {
+  background: rgba(226, 232, 240, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: inset 1px 1.5px 3px rgba(148, 163, 184, 0.3) !important;
+}
+
+/* Input elements styling */
+input, select, textarea, .clay-input {
+  background: rgba(234, 241, 250, 0.55) !important;
+  color: #1e293b !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+  border-radius: 14px !important;
+  box-shadow: 
+    inset 3px 3px 6px rgba(148, 163, 184, 0.32), 
+    inset -2px -2px 6px rgba(255, 255, 255, 0.8) !important;
+  transition: all 0.22s ease-in-out !important;
+  outline: none !important;
+}
+
+input:focus, select:focus, textarea:focus, .clay-input:focus {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 
+    0px 0px 12px rgba(59, 130, 246, 0.15), 
+    inset 2px 2px 5px rgba(148, 163, 184, 0.2), 
+    inset -2px -2px 5px rgba(255, 255, 255, 0.9) !important;
+}
+
+::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* ==========================================================================
+   Puffy Colorful Tactile Candle Buttons (Clay Buttons)
+   ========================================================================== */
+.clay-btn,
+button[type="submit"],
+.bg-blue-600,
+.bg-emerald-600,
+.bg-emerald-500,
+.bg-red-600,
+.bg-red-650,
+.bg-red-500,
+.bg-amber-500,
+.bg-yellow-500 {
+  border-radius: 16px !important;
+  font-weight: 800 !important;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  cursor: pointer !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Puffy Blue Button */
+.bg-blue-600 {
+  background: linear-gradient(135deg, #60a5fa, #2563eb) !important;
+  color: white !important;
+  box-shadow: 
+    0px 6px 15px rgba(37, 99, 235, 0.3), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.2), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.45) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.bg-blue-600:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0px 9px 18px rgba(37, 99, 235, 0.38), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.18), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Puffy Green Button */
+.bg-emerald-600,
+.bg-emerald-500 {
+  background: linear-gradient(135deg, #34d399, #059669) !important;
+  color: white !important;
+  box-shadow: 
+    0px 6px 15px rgba(5, 150, 105, 0.3), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.2), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.45) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.bg-emerald-600:hover,
+.bg-emerald-500:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0px 9px 18px rgba(5, 150, 105, 0.38), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.18), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Puffy Red Button */
+.bg-red-650,
+.bg-red-600,
+.bg-red-500 {
+  background: linear-gradient(135deg, #f87171, #dc2626) !important;
+  color: white !important;
+  box-shadow: 
+    0px 6px 15px rgba(220, 38, 38, 0.3), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.2), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.45) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.bg-red-650:hover,
+.bg-red-600:hover,
+.bg-red-500:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0px 9px 18px rgba(220, 38, 38, 0.38), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.18), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Puffy Amber/Yellow Button */
+.bg-amber-500,
+.bg-yellow-500 {
+  background: linear-gradient(135deg, #fbbf24, #d97706) !important;
+  color: white !important;
+  box-shadow: 
+    0px 6px 15px rgba(217, 119, 6, 0.3), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.15), 
+    inset 4px 4px 8px rgba(255, 255, 245, 0.45) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.bg-amber-500:hover,
+.bg-yellow-500:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0px 9px 18px rgba(217, 119, 6, 0.38), 
+    inset -4px -4px 8px rgba(0, 0, 0, 0.12), 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Globally handle active press state */
+button:active:not(:disabled),
+.clay-btn:active:not(:disabled),
+li[role="tab"]:active {
+  transform: translateY(1.5px) !important;
+  box-shadow: 
+    inset 2px 2px 5px rgba(0, 0, 0, 0.12), 
+    inset -2px -2px 5px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Tactile Light Claymorphism Edit and Delete Buttons */
+.clay-edit-btn {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important; /* Soft, delicious light mint green for positive actions */
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important; /* light sky blue */
+  color: #0369a1 !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 12px !important;
+  box-shadow: 
+    0px 3px 6px rgba(14, 165, 233, 0.1), 
+    inset -2px -2px 5px rgba(14, 165, 233, 0.1), 
+    inset 2px 2px 5px rgba(255, 255, 255, 0.95) !important;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+.clay-edit-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0px 6px 12px rgba(14, 165, 233, 0.18), 
+    inset -2px -2px 5px rgba(14, 165, 233, 0.08), 
+    inset 2px 2px 5px rgba(255, 255, 255, 0.99) !important;
+  color: #0284c7 !important;
+}
+
+.clay-delete-btn {
+  background: linear-gradient(135deg, #fee2e2, #fecaca) !important; /* Soft light-red */
+  color: #b91c1c !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 12px !important;
+  box-shadow: 
+    0px 3px 6px rgba(239, 68, 68, 0.1), 
+    inset -2px -2px 5px rgba(239, 68, 68, 0.1), 
+    inset 2px 2px 5px rgba(255, 255, 255, 0.95) !important;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+.clay-delete-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0px 6px 12px rgba(239, 68, 68, 0.18), 
+    inset -2px -2px 5px rgba(239, 68, 68, 0.08), 
+    inset 2px 2px 5px rgba(255, 255, 255, 0.99) !important;
+  color: #dc2626 !important;
+}
+
+/* Disabled buttons */
+button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   Borders, Layout Header/Nav, and UI Chrome Styling
+   ========================================================================== */
+.border-gray-800,
+.border-gray-700,
+.border-gray-900,
+.border-white\/5,
+.border-white\/10,
+.border-white\/20 {
+  border-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+/* Floating header and Nav */
+header, nav,
+.bg-\[\#0a0a0c\]\/80,
+.bg-\[\#0a0a0c\]\/90 {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(24px) !important;
+  border-color: rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 
+    0px 10px 30px rgba(148, 163, 184, 0.12),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.8) !important;
+  color: #1e293b !important;
+}
+
+/* For navigation active/current selectors */
+nav a, nav button {
+  color: #475569;
+}
+nav a.active, nav button.active {
+  color: #2563eb !important;
+}
+
+/* ==========================================================================
+   Modal Overlays
+   ========================================================================== */
+.bg-black\/80,
+.bg-black\/50,
+.bg-black\/40,
+.bg-black\/45,
+.bg-gray-905\/80,
+.bg-gray-950\/80 {
+  background: rgba(15, 23, 42, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* ==========================================================================
+   Tactile Light Claymorphism Custom Buttons & Form Controls
+   This targets un-overridden dark classes (bg-gray-800, etc.) on interactive elements
+   so they render as beautiful soft-grey inset clay wells or panels.
+   ========================================================================== */
+
+/* Dark buttons & custom select pills to light tactile select buttons */
+button.bg-gray-800,
+button.bg-gray-900,
+button.bg-gray-950,
+button[class*="bg-gray-800"],
+button[class*="bg-gray-900"],
+button[class*="bg-gray-950"],
+button[class*="bg-[#1e1e2a]"],
+button[class*="bg-[#16161a]"],
+button[class*="bg-[#121215]"],
+button[class*="bg-[#131316]"],
+button[class*="bg-[#0f0f12]"],
+select.bg-gray-800,
+select.bg-gray-900,
+select.bg-gray-950 {
+  background: rgba(234, 241, 250, 0.55) !important;
+  color: #475569 !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 
+    inset 3px 3px 6px rgba(148, 163, 184, 0.28), 
+    inset -2px -2px 6px rgba(255, 255, 255, 0.8) !important;
+  border-radius: 14px !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover and active states for tactile unselected buttons */
+button.bg-gray-800:hover,
+button.bg-gray-900:hover,
+button.bg-gray-950:hover,
+button[class*="bg-gray-800"]:hover,
+button[class*="bg-gray-900"]:hover,
+button[class*="bg-gray-950"]:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1e293b !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  box-shadow:
+    0px 4px 10px rgba(148, 163, 184, 0.15),
+    inset 2px 2px 5px rgba(148, 163, 184, 0.15),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Disabled tactile buttons (eg. "+ ADD QUEST" with empty title) */
+button.bg-gray-800:disabled,
+button[class*="bg-gray-800"]:disabled {
+  background: rgba(241, 245, 249, 0.7) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(226, 232, 240, 0.6) !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Tactile Flyout Menus & Custom Selection Dropdowns (eg. Skills Dropdown Picker) */
+[class*="bg-[#16161a]"],
+[class*="bg-[#121215]"] {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1.5px solid rgba(226, 232, 240, 0.85) !important;
+  box-shadow: 
+    0px 15px 40px rgba(148, 163, 184, 0.25),
+    inset -3px -3px 8px rgba(148, 163, 184, 0.05),
+    inset 3px 3px 8px rgba(255, 255, 255, 0.85) !important;
+  color: #1e293b !important;
+}
+
+/* Double-check nested items inside flyouts */
+[class*="bg-[#16161a]"] button,
+[class*="bg-[#121215]"] button {
+  color: #475569 !important;
+}
+
+[class*="bg-[#16161a]"] button:hover,
+[class*="bg-[#121215]"] button:hover {
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #2563eb !important;
+}
+
+/* ==========================================================================
+   High-Accessibility Light Theme Text Colors
+   ========================================================================== */
+
+/* Overriding white text to slate-800 */
+.text-gray-100,
+.text-slate-100,
+.text-white,
+.text-gray-50,
+.text-slate-50,
+.text-gray-200,
+.text-slate-200,
+.text-gray-150,
+.text-\[\#ececf1\],
+h1, h2, h3, h4, h5, h6 {
+  color: #1e293b !important;
+}
+
+b, strong, th {
+  color: #0f172a !important;
+}
+
+/* Overriding medium grey helper text to slate-600 */
+.text-gray-400,
+.text-slate-400,
+.text-gray-500,
+.text-slate-500 {
+  color: #475569 !important;
+}
+
+.text-gray-300,
+.text-slate-300 {
+  color: #576579 !important;
+}
+
+/* Extra light sub-text to slate-400 */
+.text-gray-600,
+.text-slate-600 {
+  color: #64748b !important;
+}
+
+/* Colorful Accents optimization for clear reading in Light mode */
+.text-emerald-400,
+.text-emerald-500 {
+  color: #059669 !important; /* Bold green */
+}
+.text-red-400 {
+  color: #dc2626 !important; /* Bold red */
+}
+.text-blue-400 {
+  color: #2563eb !important; /* Bold blue */
+}
+.text-yellow-400,
+.text-yellow-500 {
+  color: #d97706 !important; /* Bold warm gold/amber */
+}
+.text-pink-400 {
+  color: #db2777 !important; /* Bold pink */
+}
+.text-purple-400 {
+  color: #7c3aed !important; /* Bold purple */
+}
+
+/* Custom background accents */
+.bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+}
+.bg-red-500\/10 {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+}
+.bg-yellow-500\/10 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  color: #b45309 !important;
+}
+.bg-blue-500\/10 {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  color: #1d4ed8 !important;
+}
+
+/* Ensure high contrast white text inside colored puffy buttons and badges */
+.bg-blue-600, .bg-blue-600 *,
+.bg-emerald-600, .bg-emerald-600 *,
+.bg-emerald-500, .bg-emerald-500 *,
+.bg-red-650, .bg-red-650 *,
+.bg-red-600, .bg-red-600 *,
+.bg-red-500, .bg-red-500 *,
+.bg-amber-500, .bg-amber-500 *,
+.bg-yellow-500, .bg-yellow-500 *,
+.bg-orange-500, .bg-orange-500 *,
+.button-solid-white-text,
+button[type="submit"],
+button[type="submit"] *,
+.absolute.-bottom-1.-right-1.bg-orange-500 * {
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   Base Layer & Scrollbar Support
+   ========================================================================== */
+@layer base {
+  body {
+    background: #e5ecf6;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(191, 219, 254, 0.65) 0px, transparent 50%),
+      radial-gradient(at 50% 0%, rgba(244, 63, 94, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(253, 230, 138, 0.65) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(199, 210, 254, 0.65) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(253, 224, 71, 0.15) 0px, transparent 50%);
+    background-attachment: fixed;
+    color: #1e293b;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    antialiased: true;
+  }
+
+  strong, b {
+    font-weight: 800;
+  }
+
+  .markdown-body strong {
+    font-weight: 800;
+    color: #0f172a;
+  }
+}
+
+/* Custom scrollbars adapted to light theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================================================
+   Theme-specific navigation
+   ========================================================================== */
+
+html:not([data-theme="terminal"]) .app-nav-button.is-active .app-nav-icon {
+  color: #ffffff;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  box-shadow:
+    0 6px 14px rgba(37, 99, 235, 0.35),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.55),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.22);
+}
+
+/* ==========================================================================
+   Terminal Theme
+   Inspired by the user's monospace habit-tracker references.
+   ========================================================================== */
+
+html[data-theme="terminal"] {
+  --terminal-bg: #101115;
+  --terminal-panel: #13151a;
+  --terminal-panel-strong: #171a20;
+  --terminal-border: #292d35;
+  --terminal-text: #d8dbe2;
+  --terminal-muted: #6f7480;
+  --terminal-green: #42c997;
+  --terminal-blue: #5791e6;
+  --terminal-cyan: #45b9c7;
+  --terminal-amber: #e0aa48;
+  --terminal-purple: #9766e8;
+  --terminal-red: #e46a75;
+  /* Inputs cannot carry pseudo-elements, so the shell prompt and select caret
+     are drawn as background glyphs. */
+  --terminal-prompt-mark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='7' height='12' viewBox='0 0 7 12'><path d='M1 3 L5 6 L1 9' fill='none' stroke='%2342c997' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --terminal-select-caret: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='12' viewBox='0 0 9 12'><path d='M1 5 L4.5 8 L8 5' fill='none' stroke='%236f7480' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background: var(--terminal-bg);
+  color-scheme: dark;
+}
+
+html[data-theme="terminal"] body {
+  background: var(--terminal-bg) !important;
+  background-image: none !important;
+  color: var(--terminal-text) !important;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
+}
+
+html[data-theme="terminal"] .app-shell,
+html[data-theme="terminal"] .app-background {
+  background: var(--terminal-bg) !important;
+  color: var(--terminal-text) !important;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
+}
+
+html[data-theme="terminal"] .app-background-orb {
+  display: none;
+}
+
+html[data-theme="terminal"] .app-background-pattern {
+  opacity: 0.18 !important;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+}
+
+html[data-theme="terminal"] header,
+html[data-theme="terminal"] nav,
+html[data-theme="terminal"] .bg-\[\#0a0a0c\]\/80,
+html[data-theme="terminal"] .bg-\[\#0a0a0c\]\/90 {
+  background: rgba(16, 17, 21, 0.96) !important;
+  backdrop-filter: blur(12px) !important;
+  border-color: var(--terminal-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--terminal-text) !important;
+}
+
+html[data-theme="terminal"] header {
+  border-bottom: 1px solid var(--terminal-border) !important;
+}
+
+html[data-theme="terminal"] nav {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+html[data-theme="terminal"] .app-nav-button {
+  gap: 2px !important;
+  transform: none !important;
+}
+
+html[data-theme="terminal"] .app-nav-icon {
+  width: 42px !important;
+  height: 28px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--terminal-muted) !important;
+}
+
+html[data-theme="terminal"] .app-nav-label {
+  color: var(--terminal-muted) !important;
+  font-size: 10px !important;
+  text-transform: lowercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+html[data-theme="terminal"] .app-nav-button.is-active {
+  border-top: 2px solid var(--terminal-green);
+}
+
+html[data-theme="terminal"] .app-nav-button.is-active .app-nav-icon,
+html[data-theme="terminal"] .app-nav-button.is-active .app-nav-label {
+  color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .clay-card,
+html[data-theme="terminal"] [class*="bg-gray-900"],
+html[data-theme="terminal"] [class*="bg-gray-950"],
+html[data-theme="terminal"] [class*="bg-[#0f0f12]"],
+html[data-theme="terminal"] [class*="bg-[#0a0a0c]"],
+html[data-theme="terminal"] [class*="bg-[#121215]"],
+html[data-theme="terminal"] [class*="bg-[#131316]"],
+html[data-theme="terminal"] [class*="bg-[#111114]"],
+html[data-theme="terminal"] [class*="bg-[#16161a]"] {
+  background: var(--terminal-panel) !important;
+  backdrop-filter: none !important;
+  border: 1px solid var(--terminal-border) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: var(--terminal-text) !important;
+}
+
+html[data-theme="terminal"] .clay-inset-panel,
+html[data-theme="terminal"] .clay-inset-panel-deep,
+html[data-theme="terminal"] .bg-black\/45,
+html[data-theme="terminal"] .bg-black\/40,
+html[data-theme="terminal"] .bg-\[\#0a0a0f\]\/40,
+html[data-theme="terminal"] .bg-\[\#08080c\],
+html[data-theme="terminal"] .bg-\[\#0a0a0c\]\/50,
+html[data-theme="terminal"] .bg-gray-950\/20,
+html[data-theme="terminal"] .bg-gray-950\/30,
+html[data-theme="terminal"] .bg-gray-900\/20,
+html[data-theme="terminal"] .bg-gray-800\/20,
+html[data-theme="terminal"] .bg-gray-800\/30,
+html[data-theme="terminal"] .bg-gray-800\/50,
+html[data-theme="terminal"] div.bg-gray-800,
+html[data-theme="terminal"] div.bg-gray-700 {
+  background: #0d0f13 !important;
+  border: 1px solid var(--terminal-border) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  color: var(--terminal-text) !important;
+}
+
+html[data-theme="terminal"] input,
+html[data-theme="terminal"] select,
+html[data-theme="terminal"] textarea,
+html[data-theme="terminal"] .clay-input {
+  background: transparent !important;
+  color: var(--terminal-text) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--terminal-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  caret-color: var(--terminal-green);
+  font-family: inherit !important;
+}
+
+html[data-theme="terminal"] input:focus,
+html[data-theme="terminal"] select:focus,
+html[data-theme="terminal"] textarea:focus,
+html[data-theme="terminal"] .clay-input:focus {
+  background: rgba(66, 201, 151, 0.06) !important;
+  border-bottom-color: var(--terminal-green) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+html[data-theme="terminal"] ::placeholder {
+  color: var(--terminal-muted) !important;
+}
+
+html[data-theme="terminal"] button,
+html[data-theme="terminal"] .clay-btn,
+html[data-theme="terminal"] button[type="submit"],
+html[data-theme="terminal"] .bg-blue-600,
+html[data-theme="terminal"] .bg-emerald-600,
+html[data-theme="terminal"] .bg-emerald-500,
+html[data-theme="terminal"] .bg-red-600,
+html[data-theme="terminal"] .bg-red-500,
+html[data-theme="terminal"] .bg-amber-500,
+html[data-theme="terminal"] .bg-yellow-500 {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-family: inherit !important;
+}
+
+html[data-theme="terminal"] .bg-blue-600 {
+  background: transparent !important;
+  color: var(--terminal-blue) !important;
+  border: 1px solid var(--terminal-blue) !important;
+}
+
+html[data-theme="terminal"] .bg-emerald-600,
+html[data-theme="terminal"] .bg-emerald-500 {
+  background: transparent !important;
+  color: var(--terminal-green) !important;
+  border: 1px solid var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .bg-red-600,
+html[data-theme="terminal"] .bg-red-500 {
+  background: transparent !important;
+  color: var(--terminal-red) !important;
+  border: 1px solid var(--terminal-red) !important;
+}
+
+html[data-theme="terminal"] .bg-amber-500,
+html[data-theme="terminal"] .bg-yellow-500 {
+  background: transparent !important;
+  color: var(--terminal-amber) !important;
+  border: 1px solid var(--terminal-amber) !important;
+}
+
+html[data-theme="terminal"] .bg-blue-600 *,
+html[data-theme="terminal"] .bg-emerald-600 *,
+html[data-theme="terminal"] .bg-emerald-500 *,
+html[data-theme="terminal"] .bg-red-600 *,
+html[data-theme="terminal"] .bg-red-500 *,
+html[data-theme="terminal"] .bg-amber-500 *,
+html[data-theme="terminal"] .bg-yellow-500 *,
+html[data-theme="terminal"] button[type="submit"] * {
+  color: inherit !important;
+}
+
+html[data-theme="terminal"] button:hover:not(:disabled) {
+  transform: none !important;
+  filter: brightness(1.22);
+  box-shadow: none !important;
+}
+
+html[data-theme="terminal"] .clay-card-hover:hover,
+html[data-theme="terminal"] .hover\:border-gray-600:hover,
+html[data-theme="terminal"] .hover\:border-yellow-500\/35:hover,
+html[data-theme="terminal"] .hover\:border-blue-500\/35:hover {
+  transform: none !important;
+  background: var(--terminal-panel-strong) !important;
+  border-color: #3b414d !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="terminal"] .border-gray-800,
+html[data-theme="terminal"] .border-gray-700,
+html[data-theme="terminal"] .border-gray-900,
+html[data-theme="terminal"] .border-white\/5,
+html[data-theme="terminal"] .border-white\/10,
+html[data-theme="terminal"] .border-white\/20 {
+  border-color: var(--terminal-border) !important;
+}
+
+html[data-theme="terminal"] .text-gray-100,
+html[data-theme="terminal"] .text-slate-100,
+html[data-theme="terminal"] .text-white,
+html[data-theme="terminal"] .text-gray-50,
+html[data-theme="terminal"] .text-slate-50,
+html[data-theme="terminal"] .text-gray-200,
+html[data-theme="terminal"] .text-slate-200,
+html[data-theme="terminal"] .text-gray-150,
+html[data-theme="terminal"] .text-\[\#ececf1\],
+html[data-theme="terminal"] h1,
+html[data-theme="terminal"] h2,
+html[data-theme="terminal"] h3,
+html[data-theme="terminal"] h4,
+html[data-theme="terminal"] h5,
+html[data-theme="terminal"] h6 {
+  color: var(--terminal-text) !important;
+}
+
+html[data-theme="terminal"] b,
+html[data-theme="terminal"] strong,
+html[data-theme="terminal"] th {
+  color: var(--terminal-text) !important;
+}
+
+html[data-theme="terminal"] .text-gray-300,
+html[data-theme="terminal"] .text-slate-300,
+html[data-theme="terminal"] .text-gray-400,
+html[data-theme="terminal"] .text-slate-400,
+html[data-theme="terminal"] .text-gray-500,
+html[data-theme="terminal"] .text-slate-500,
+html[data-theme="terminal"] .text-gray-600,
+html[data-theme="terminal"] .text-slate-600 {
+  color: var(--terminal-muted) !important;
+}
+
+html[data-theme="terminal"] .text-emerald-400,
+html[data-theme="terminal"] .text-emerald-500,
+html[data-theme="terminal"] .text-green-400 {
+  color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .text-blue-400,
+html[data-theme="terminal"] .text-blue-500,
+html[data-theme="terminal"] .text-blue-600 {
+  color: var(--terminal-blue) !important;
+}
+
+html[data-theme="terminal"] .text-yellow-400,
+html[data-theme="terminal"] .text-yellow-500,
+html[data-theme="terminal"] .text-orange-400 {
+  color: var(--terminal-amber) !important;
+}
+
+html[data-theme="terminal"] .text-purple-400,
+html[data-theme="terminal"] .text-pink-400 {
+  color: var(--terminal-purple) !important;
+}
+
+html[data-theme="terminal"] .text-red-400 {
+  color: var(--terminal-red) !important;
+}
+
+html[data-theme="terminal"] .bg-black\/80,
+html[data-theme="terminal"] .bg-black\/50,
+html[data-theme="terminal"] .bg-gray-905\/80,
+html[data-theme="terminal"] .bg-gray-950\/80 {
+  background: rgba(4, 5, 7, 0.92) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html[data-theme="terminal"] .theme-option {
+  min-height: 112px;
+  background: #0c0e12 !important;
+  border-color: var(--terminal-border) !important;
+}
+
+html[data-theme="terminal"] .theme-option.is-selected {
+  color: var(--terminal-green) !important;
+  border-color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .theme-option-marker {
+  color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] div[class*="bg-white"],
+html[data-theme="terminal"] section[class*="bg-white"],
+html[data-theme="terminal"] article[class*="bg-white"],
+html[data-theme="terminal"] div[class*="bg-slate-50"],
+html[data-theme="terminal"] div[class*="bg-slate-100"],
+html[data-theme="terminal"] div[class*="bg-slate-200"],
+html[data-theme="terminal"] section[class*="bg-slate-50"],
+html[data-theme="terminal"] section[class*="bg-slate-100"],
+html[data-theme="terminal"] section[class*="bg-slate-200"] {
+  background: var(--terminal-panel) !important;
+  border-color: var(--terminal-border) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="terminal"] .text-slate-700,
+html[data-theme="terminal"] .text-slate-800,
+html[data-theme="terminal"] .text-slate-900 {
+  color: var(--terminal-text) !important;
+}
+
+html[data-theme="terminal"] button[class*="bg-gray"],
+html[data-theme="terminal"] button[class*="bg-slate"],
+html[data-theme="terminal"] button[class*="bg-white"] {
+  background: var(--terminal-panel) !important;
+  color: var(--terminal-text) !important;
+  border-color: var(--terminal-border) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="terminal"] ::-webkit-scrollbar-thumb {
+  background: #3a3f49;
+  border-radius: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="terminal"] *,
+  html[data-theme="terminal"] *::before,
+  html[data-theme="terminal"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+   Terminal Theme — native command-line UI
+   Real layout (not a reskin): monospace rows, prompts, [ ] checkboxes.
+   ========================================================================== */
+
+html[data-theme="terminal"] .term-root {
+  min-height: 100vh;
+  background: var(--terminal-bg);
+  color: var(--terminal-text);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: -0.1px;
+}
+
+html[data-theme="terminal"] .term-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: 0;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 18px;
+  background: var(--terminal-bg);
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+html[data-theme="terminal"] .term-tab {
+  flex: 1;
+  padding: 14px 4px 11px;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--terminal-muted) !important;
+  font: inherit;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-tab.is-active {
+  color: var(--terminal-green) !important;
+  border-bottom-color: var(--terminal-green) !important;
+  font-weight: 700;
+}
+
+html[data-theme="terminal"] .term-body {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 18px 18px 64px;
+}
+
+html[data-theme="terminal"] .term-prompt {
+  margin: 0 0 2px;
+  word-break: break-word;
+}
+
+html[data-theme="terminal"] .term-prompt-user {
+  color: var(--terminal-cyan);
+}
+
+html[data-theme="terminal"] .term-prompt-symbol {
+  margin: 0 6px;
+  color: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-prompt-cmd {
+  color: var(--terminal-text);
+  font-weight: 700;
+}
+
+html[data-theme="terminal"] .term-comment {
+  margin: 0;
+  color: var(--terminal-muted);
+}
+
+html[data-theme="terminal"] .term-comment.is-nested {
+  margin-left: 26px;
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-date {
+  margin: 16px 0 2px;
+  color: var(--terminal-text);
+}
+
+html[data-theme="terminal"] .term-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-meta-flame {
+  color: var(--terminal-amber);
+}
+
+html[data-theme="terminal"] .term-meta-shield {
+  color: var(--terminal-cyan);
+}
+
+html[data-theme="terminal"] .term-meta-xp,
+html[data-theme="terminal"] .term-meta-sep {
+  color: var(--terminal-muted);
+}
+
+/* Week strip */
+
+html[data-theme="terminal"] .term-week {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0 18px;
+}
+
+html[data-theme="terminal"] .term-week-arrow {
+  padding: 4px 6px;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--terminal-muted) !important;
+  font: inherit;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-week-days {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+html[data-theme="terminal"] .term-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+html[data-theme="terminal"] .term-day-label {
+  color: var(--terminal-muted);
+  font-size: 11px;
+}
+
+html[data-theme="terminal"] .term-day-num {
+  padding: 1px 7px;
+  color: var(--terminal-text);
+  font-size: 13px;
+}
+
+html[data-theme="terminal"] .term-day-num.is-today {
+  background: var(--terminal-green);
+  border-radius: 2px;
+  color: #0b0d10;
+  font-weight: 700;
+}
+
+html[data-theme="terminal"] .term-day-num.is-future {
+  color: #4b5563;
+}
+
+html[data-theme="terminal"] .term-day-blocks {
+  display: flex;
+  gap: 2px;
+}
+
+html[data-theme="terminal"] .term-block {
+  width: 9px;
+  height: 9px;
+  background: #1c1f26;
+  border-radius: 1px;
+}
+
+html[data-theme="terminal"] .term-block.is-filled {
+  background: var(--terminal-amber);
+}
+
+html[data-theme="terminal"] .term-block.is-filled.is-complete {
+  background: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-block.is-future {
+  background: repeating-linear-gradient(
+    45deg,
+    #191c22,
+    #191c22 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+/* Routine groups + quest rows */
+
+html[data-theme="terminal"] .term-group {
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--terminal-border);
+}
+
+html[data-theme="terminal"] .term-group-head {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font: inherit;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-group-name {
+  font-weight: 700;
+}
+
+html[data-theme="terminal"] .term-group-count {
+  color: var(--terminal-muted) !important;
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-check {
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--terminal-muted) !important;
+  font: inherit;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-check.is-done {
+  color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .term-habit-meta {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-streak {
+  color: var(--terminal-amber);
+}
+
+html[data-theme="terminal"] .term-time,
+html[data-theme="terminal"] .term-xp {
+  color: var(--terminal-muted);
+}
+
+/* Stats + profile sections */
+
+html[data-theme="terminal"] .term-section {
+  padding: 16px 0 6px;
+  border-top: 1px solid var(--terminal-border);
+}
+
+html[data-theme="terminal"] .term-section:first-of-type {
+  border-top: 0;
+}
+
+html[data-theme="terminal"] .term-section-title {
+  margin: 0 0 2px;
+  color: var(--terminal-green) !important;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+html[data-theme="terminal"] .term-stat-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 3px 0 0;
+  margin-left: 26px;
+}
+
+html[data-theme="terminal"] .term-stat-label {
+  color: var(--terminal-muted);
+}
+
+html[data-theme="terminal"] .term-stat-value {
+  color: var(--terminal-text);
+  text-align: right;
+}
+
+html[data-theme="terminal"] .term-window-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 4px 26px;
+}
+
+html[data-theme="terminal"] .term-token {
+  padding: 2px 4px;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--terminal-muted) !important;
+  font: inherit;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-token.is-active {
+  color: var(--terminal-green) !important;
+  font-weight: 700;
+}
+
+html[data-theme="terminal"] .term-token.is-action {
+  color: var(--terminal-cyan) !important;
+}
+
+html[data-theme="terminal"] .term-token.is-danger {
+  color: var(--terminal-red) !important;
+}
+
+html[data-theme="terminal"] .term-token:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+html[data-theme="terminal"] .term-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 26px;
+  padding: 2px 0;
+}
+
+html[data-theme="terminal"] .term-bar-label {
+  width: 26px;
+  color: var(--terminal-muted);
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-bar-track {
+  flex: 1;
+  height: 10px;
+  background: #171a20 !important;
+  border: 0 !important;
+  border-radius: 1px !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+html[data-theme="terminal"] .term-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-bar-value {
+  width: 44px;
+  color: var(--terminal-text);
+  font-size: 12px;
+  text-align: right;
+}
+
+html[data-theme="terminal"] .term-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0 26px;
+}
+
+html[data-theme="terminal"] .term-field-label {
+  width: 78px;
+  color: var(--terminal-muted);
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 2px 4px 15px !important;
+  background: transparent var(--terminal-prompt-mark) no-repeat 1px 50% !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--terminal-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--terminal-text) !important;
+  caret-color: var(--terminal-green);
+  caret-shape: block;
+  font: inherit !important;
+}
+
+html[data-theme="terminal"] .term-input:focus {
+  background-color: rgba(66, 201, 151, 0.06) !important;
+  border-bottom-color: var(--terminal-green) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+html[data-theme="terminal"] .term-input::placeholder {
+  color: #555a64 !important;
+}
+
+html[data-theme="terminal"] .term-input::selection {
+  background: var(--terminal-green);
+  color: var(--terminal-bg);
+}
+
+html[data-theme="terminal"] select.term-input,
+html[data-theme="terminal"] .term-input[type="color"],
+html[data-theme="terminal"] .term-input[type="file"],
+html[data-theme="terminal"] .term-input[type="checkbox"],
+html[data-theme="terminal"] .term-input[type="radio"] {
+  caret-shape: auto;
+}
+
+html[data-theme="terminal"] select.term-input {
+  appearance: none;
+  padding-right: 18px !important;
+  background-image: var(--terminal-prompt-mark), var(--terminal-select-caret) !important;
+  background-repeat: no-repeat, no-repeat !important;
+  background-position: 1px 50%, right 2px 50% !important;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] select.term-input option {
+  background: #0d0f13;
+  color: var(--terminal-text);
+}
+
+/* Steppers and pickers are chrome the command line does not have. */
+
+html[data-theme="terminal"] .term-input[type="number"] {
+  appearance: textfield;
+}
+
+html[data-theme="terminal"] .term-input::-webkit-outer-spin-button,
+html[data-theme="terminal"] .term-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+html[data-theme="terminal"] .term-input::-webkit-calendar-picker-indicator {
+  filter: grayscale(1) opacity(0.45);
+}
+
+html[data-theme="terminal"] .term-field-count {
+  color: var(--terminal-muted);
+  font-size: 11px;
+}
+
+html[data-theme="terminal"] .term-option {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-option-mark {
+  color: var(--terminal-muted);
+}
+
+html[data-theme="terminal"] .term-option.is-active .term-option-mark,
+html[data-theme="terminal"] .term-option.is-active .term-option-name {
+  color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .term-option-body {
+  display: block;
+  min-width: 0;
+}
+
+html[data-theme="terminal"] .term-option-name {
+  display: block;
+  color: var(--terminal-text);
+}
+
+html[data-theme="terminal"] .term-file {
+  display: none !important;
+}
+
+/* Neutralize claymorphism press/hover physics inside the terminal shell */
+
+html[data-theme="terminal"] .term-root button:active:not(:disabled) {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="terminal"] .term-root button:hover:not(:disabled) {
+  filter: none !important;
+  opacity: 0.85;
+}
+
+/* Terminal parity: skills, quests, settings, dialogs and notices */
+
+html[data-theme="terminal"] .term-command-row,
+html[data-theme="terminal"] .term-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+
+html[data-theme="terminal"] .term-filter-row,
+html[data-theme="terminal"] .term-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+html[data-theme="terminal"] .term-category-toggle {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  color: inherit !important;
+  text-align: left;
+}
+
+html[data-theme="terminal"] .term-skill-list {
+  margin: 7px 0 6px 26px;
+}
+
+html[data-theme="terminal"] .term-skill-row,
+html[data-theme="terminal"] .term-quest-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+}
+
+html[data-theme="terminal"] .term-skill-row,
+html[data-theme="terminal"] .term-quest-row:not(.is-grouped) {
+  border-top: 1px dotted #242933;
+}
+
+html[data-theme="terminal"] .term-skill-row:first-child,
+html[data-theme="terminal"] .term-quest-row:first-child,
+html[data-theme="terminal"] .term-quest-row.is-grouped {
+  border-top: 0;
+}
+
+html[data-theme="terminal"] .term-quest-row.is-grouped {
+  padding: 5px 0;
+}
+
+html[data-theme="terminal"] .term-skill-copy,
+html[data-theme="terminal"] .term-quest-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+html[data-theme="terminal"] .term-skill-copy p,
+html[data-theme="terminal"] .term-quest-copy p {
+  margin: 0;
+}
+
+html[data-theme="terminal"] .term-quest-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+html[data-theme="terminal"] .term-quest-name.is-done {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+html[data-theme="terminal"] .term-inline-meta {
+  color: var(--terminal-muted);
+  font-size: 11px;
+}
+
+html[data-theme="terminal"] .term-state-on {
+  color: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-state-off {
+  color: var(--terminal-muted);
+}
+
+html[data-theme="terminal"] .term-done-copy {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+html[data-theme="terminal"] .term-add-row {
+  margin-top: 6px;
+}
+
+html[data-theme="terminal"] .term-command-panel {
+  width: 100%;
+  scroll-margin-top: 60px;
+  margin: 14px 0 18px;
+  padding: 12px 0 14px 18px;
+  background: linear-gradient(90deg, rgba(66, 201, 151, 0.045), transparent 75%);
+  border: 0;
+  border-top: 1px solid var(--terminal-green);
+  border-bottom: 1px solid var(--terminal-border);
+  border-left: 2px solid var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-command-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding-bottom: 9px;
+  border-bottom: 1px dashed var(--terminal-border);
+  color: var(--terminal-text);
+}
+
+html[data-theme="terminal"] .term-command-panel-head b {
+  color: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-command-panel-body {
+  padding-right: 12px;
+}
+
+html[data-theme="terminal"] .term-command-output {
+  margin: 8px 0 16px;
+  color: var(--terminal-muted);
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-command-output b {
+  color: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-form {
+  display: grid;
+  gap: 12px;
+}
+
+html[data-theme="terminal"] .term-form > label {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: var(--terminal-muted);
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-form > label:focus-within {
+  color: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-form .term-input {
+  width: 100%;
+}
+
+html[data-theme="terminal"] .term-textarea {
+  min-height: 76px;
+  padding-top: 5px !important;
+  background-position: 1px 8px !important;
+  resize: vertical;
+}
+
+html[data-theme="terminal"] .term-color-input {
+  width: 54px;
+  height: 26px;
+  padding: 0 !important;
+  background-image: none !important;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+  border: 1px dashed var(--terminal-border);
+}
+
+html[data-theme="terminal"] .term-fieldset legend {
+  padding: 0 6px;
+  color: var(--terminal-muted);
+  font-size: 11px;
+}
+
+html[data-theme="terminal"] .term-fieldset legend::before {
+  content: "// ";
+}
+
+html[data-theme="terminal"] .term-command-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--terminal-border);
+}
+
+html[data-theme="terminal"] .term-copy-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px 26px;
+}
+
+html[data-theme="terminal"] .term-copy-row .term-input {
+  flex: 1;
+  min-width: 0;
+}
+
+html[data-theme="terminal"] .term-nested-action {
+  margin: 6px 0 0 26px;
+}
+
+html[data-theme="terminal"] .term-install-notes {
+  margin: 7px 0 0 26px;
+  color: var(--terminal-muted);
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-install-notes p {
+  margin: 2px 0;
+}
+
+html[data-theme="terminal"] .term-toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 100;
+  width: min(360px, calc(100vw - 36px));
+  padding: 11px 13px;
+  background: #0d0f13;
+  border: 1px solid var(--terminal-green);
+  border-radius: 2px;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.35);
+  color: var(--terminal-text);
+}
+
+html[data-theme="terminal"] .term-toast p {
+  margin: 0;
+}
+
+/* Finance ledger, rendered as plain terminal output */
+
+html[data-theme="terminal"] .term-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px dotted #242933;
+}
+
+html[data-theme="terminal"] .term-ledger-sign {
+  width: 26px;
+  color: var(--terminal-muted);
+  font-size: 12px;
+}
+
+html[data-theme="terminal"] .term-ledger-sign.is-income {
+  color: var(--terminal-green);
+}
+
+html[data-theme="terminal"] .term-ledger-sign.is-expense {
+  color: var(--terminal-red);
+}
+
+html[data-theme="terminal"] .term-ledger-sign.is-transfer {
+  color: var(--terminal-cyan);
+}
+
+html[data-theme="terminal"] .term-ledger-sign.is-invest {
+  color: var(--terminal-amber);
+}
+
+/* Section headings and readouts are colour-coded so a long scroll of output
+   stays scannable instead of reading as one green wall. */
+
+html[data-theme="terminal"] .term-stat-value.is-good,
+html[data-theme="terminal"] .term-bar-value.is-good {
+  color: var(--terminal-green) !important;
+}
+
+html[data-theme="terminal"] .term-stat-value.is-bad,
+html[data-theme="terminal"] .term-bar-value.is-bad {
+  color: var(--terminal-red) !important;
+}
+
+html[data-theme="terminal"] .term-section-title.is-cyan,
+html[data-theme="terminal"] .term-stat-value.is-cyan,
+html[data-theme="terminal"] .term-bar-value.is-cyan {
+  color: var(--terminal-cyan) !important;
+}
+
+html[data-theme="terminal"] .term-section-title.is-amber,
+html[data-theme="terminal"] .term-stat-value.is-amber,
+html[data-theme="terminal"] .term-bar-value.is-amber {
+  color: var(--terminal-amber) !important;
+}
+
+html[data-theme="terminal"] .term-section-title.is-purple,
+html[data-theme="terminal"] .term-stat-value.is-purple,
+html[data-theme="terminal"] .term-bar-value.is-purple {
+  color: var(--terminal-purple) !important;
+}
+
+html[data-theme="terminal"] .term-section-title.is-blue,
+html[data-theme="terminal"] .term-stat-value.is-blue,
+html[data-theme="terminal"] .term-bar-value.is-blue {
+  color: var(--terminal-blue) !important;
+}
+
+html[data-theme="terminal"] .term-section-title.is-red,
+html[data-theme="terminal"] .term-stat-value.is-red,
+html[data-theme="terminal"] .term-bar-value.is-red {
+  color: var(--terminal-red) !important;
+}
+
+html[data-theme="terminal"] .term-bar-fill.is-mid {
+  background: var(--terminal-amber);
+}
+
+html[data-theme="terminal"] .term-bar-fill.is-low {
+  background: var(--terminal-red);
+}
+
+html[data-theme="terminal"] .term-bar-fill.is-empty {
+  background: #3a3f49;
+}
+
+html[data-theme="terminal"] .term-quest-copy .term-bar-row {
+  margin-left: 0;
+}
+
+html[data-theme="terminal"] .term-bar-row.is-labelled .term-bar-label {
+  width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="terminal"] .term-bar-row.is-labelled .term-bar-value {
+  width: 72px;
+}
+
+html[data-theme="terminal"] .term-toolbar .term-section-title {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  html[data-theme="terminal"] .term-tabs {
+    max-width: 100%;
+    padding: 0 8px;
+    overflow-x: auto;
+  }
+
+  html[data-theme="terminal"] .term-tab {
+    flex: 0 0 auto;
+    min-width: 62px;
+    padding-inline: 6px;
+    font-size: 13px;
+  }
+
+  html[data-theme="terminal"] .term-body {
+    padding-inline: 12px;
+  }
+
+  html[data-theme="terminal"] .term-toolbar,
+  html[data-theme="terminal"] .term-group-head,
+  html[data-theme="terminal"] .term-skill-row,
+  html[data-theme="terminal"] .term-quest-row {
+    align-items: flex-start;
+  }
+
+  html[data-theme="terminal"] .term-skill-row,
+  html[data-theme="terminal"] .term-quest-row {
+    flex-wrap: wrap;
+  }
+
+  html[data-theme="terminal"] .term-skill-copy,
+  html[data-theme="terminal"] .term-quest-copy {
+    min-width: calc(100% - 36px);
+  }
+
+  html[data-theme="terminal"] .term-quest-line {
+    flex-wrap: wrap;
+  }
+
+  html[data-theme="terminal"] .term-skill-row > .term-row-actions,
+  html[data-theme="terminal"] .term-quest-row > .term-row-actions {
+    width: 100%;
+    padding-left: 26px;
+  }
+
+  html[data-theme="terminal"] .term-form > label {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* Shared habit analytics */
+.analytics-heatmap,
+.analytics-month-calendar,
+.analytics-weekly-matrix,
+.analytics-trend-bars,
+.analytics-weekday-bars {
+  width: 100%;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+
+[class^="analytics-"][class$="-title"] {
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.analytics-empty {
+  padding: 12px 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.analytics-heatmap-grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.analytics-heatmap-column {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.analytics-heatmap-cell,
+.analytics-weekly-matrix-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: rgba(100, 116, 139, 0.15);
+}
+
+.analytics-heatmap-cell.is-level-1 { background: #86efac; }
+.analytics-heatmap-cell.is-level-2 { background: #4ade80; }
+.analytics-heatmap-cell.is-level-3 { background: #22c55e; }
+.analytics-heatmap-cell.is-level-4 { background: #15803d; }
+
+.analytics-month-calendar-head,
+.analytics-month-calendar-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.analytics-month-calendar-weekday,
+.analytics-month-calendar-cell {
+  display: grid;
+  min-height: 28px;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 10px;
+}
+
+.analytics-month-calendar-cell.is-completed { background: rgba(34, 197, 94, 0.22); color: #16a34a; }
+.analytics-month-calendar-cell.is-missed { background: rgba(239, 68, 68, 0.14); color: #ef4444; }
+.analytics-month-calendar-cell.is-shielded { background: rgba(34, 211, 238, 0.18); color: #0891b2; }
+.analytics-month-calendar-cell.is-paused { background: rgba(245, 158, 11, 0.14); color: #d97706; }
+.analytics-month-calendar-cell.is-future,
+.analytics-month-calendar-cell.is-empty { opacity: 0.3; }
+
+.analytics-weekly-matrix-scroll { overflow-x: auto; }
+.analytics-weekly-matrix-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.analytics-weekly-matrix-table th,
+.analytics-weekly-matrix-table td { padding: 4px; text-align: center; }
+.analytics-weekly-matrix-habit { min-width: 110px; text-align: left !important; }
+.analytics-weekly-matrix-day-label,
+.analytics-weekly-matrix-day-date { display: block; }
+.analytics-weekly-matrix-dot { display: inline-block; }
+.analytics-weekly-matrix-dot.is-completed { background: #22c55e; }
+.analytics-weekly-matrix-dot.is-missed { background: #ef4444; }
+.analytics-weekly-matrix-dot.is-paused { background: #f59e0b; }
+.analytics-weekly-matrix-dot.is-unscheduled { opacity: 0.25; }
+
+.analytics-trend-bars-list,
+.analytics-weekday-bars-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.analytics-trend-bars-item,
+.analytics-weekday-bars-item { display: grid; grid-template-columns: 44px minmax(0, 1fr) 38px; align-items: center; gap: 7px; font-size: 10px; }
+.analytics-trend-bars-bar,
+.analytics-weekday-bars-track { height: 8px; overflow: hidden; border-radius: 2px; background: rgba(100, 116, 139, 0.15); }
+.analytics-trend-bars-fill,
+.analytics-weekday-bars-fill { display: block; height: 100%; background: #22c55e; }
+
+html[data-theme="terminal"] .analytics-heatmap-cell,
+html[data-theme="terminal"] .analytics-weekly-matrix-dot,
+html[data-theme="terminal"] .analytics-trend-bars-bar,
+html[data-theme="terminal"] .analytics-weekday-bars-track {
+  border-radius: 0;
+}
+
+html[data-theme="terminal"] .analytics-month-calendar-cell {
+  border-radius: 0;
+  border: 1px solid transparent;
+}
+
+html[data-theme="terminal"] .term-habit-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--terminal-muted);
+  font-size: 11px;
+}
+
+html[data-theme="terminal"] .term-habit-number { width: 60px; flex: 0 0 60px; }
+html[data-theme="terminal"] .term-mini-progress { display: block; width: 44px; flex: 0 0 44px; height: 3px; background: var(--terminal-border); }
+html[data-theme="terminal"] .term-mini-progress i { display: block; height: 100%; background: var(--terminal-green); }
+html[data-theme="terminal"] .term-group-name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+
+/* Dense single-line rows keep long habit and skill lists scannable */
+html[data-theme="terminal"] .term-quest-row.is-dense,
+html[data-theme="terminal"] .term-skill-row.is-dense {
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+  flex-wrap: nowrap;
+  line-height: 1.6;
+}
+
+html[data-theme="terminal"] .term-row-name {
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 44%;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+html[data-theme="terminal"] .term-row-inline {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--terminal-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+html[data-theme="terminal"] .term-quest-row.is-dense .term-habit-controls,
+html[data-theme="terminal"] .term-quest-row.is-dense .term-habit-meta,
+html[data-theme="terminal"] .term-quest-row.is-dense .term-inline-meta,
+html[data-theme="terminal"] .term-skill-row.is-dense .term-inline-meta {
+  flex: 0 0 auto;
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+html[data-theme="terminal"] .term-quest-row.is-dense .term-row-actions,
+html[data-theme="terminal"] .term-skill-row.is-dense .term-row-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+html[data-theme="terminal"] .term-habit-value { color: var(--terminal-fg); }
+html[data-theme="terminal"] .term-group-name.is-muted { color: var(--terminal-muted); }
+html[data-theme="terminal"] .term-token { white-space: nowrap; }
+
+html[data-theme="terminal"] .term-assign { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; font-size: 11px; }
+html[data-theme="terminal"] .term-assign-label { color: var(--terminal-muted); }
+html[data-theme="terminal"] .term-inline-select { width: auto; min-width: 96px; padding-block: 1px; font-size: 11px; }
+
+@media (max-width: 760px) {
+  html[data-theme="terminal"] .term-quest-row.is-dense .term-row-inline,
+  html[data-theme="terminal"] .term-skill-row.is-dense .term-row-inline,
+  html[data-theme="terminal"] .term-group-name .term-row-inline {
+    display: none;
+  }
+
+  html[data-theme="terminal"] .term-quest-row.is-dense,
+  html[data-theme="terminal"] .term-skill-row.is-dense {
+    flex-wrap: wrap;
+  }
+
+  html[data-theme="terminal"] .term-row-name { max-width: none; flex: 1 1 auto; }
+
+  html[data-theme="terminal"] .term-quest-row.is-dense > .term-row-actions,
+  html[data-theme="terminal"] .term-skill-row.is-dense > .term-row-actions {
+    width: auto;
+    padding-left: 0;
+  }
+}
+
+html[data-density="compact"] .term-section { margin-top: 12px; }
+html[data-density="compact"] .term-quest-row { padding-block: 1px; }
+html[data-density="relaxed"] .term-section { margin-top: 28px; }
+html[data-density="relaxed"] .term-quest-row { padding-block: 8px; }

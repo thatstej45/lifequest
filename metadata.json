@@ -1,0 +1,5 @@
+{
+  "name": "LifeRPG: Skill Master",
+  "description": "A local-first, gamified life skills tracker designed for Android (PWA). Level up your real-world stats in health, finance, social, and career with offline persistence.",
+  "requestFramePermissions": []
+}
