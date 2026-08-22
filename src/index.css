@@ -574,10 +574,10 @@ html:not([data-theme="terminal"]) .app-nav-button.is-active .app-nav-icon {
    ========================================================================== */
 
 html[data-theme="terminal"] {
-  --terminal-bg: #101115;
-  --terminal-panel: #13151a;
-  --terminal-panel-strong: #171a20;
-  --terminal-border: #292d35;
+  --terminal-bg: #000000;
+  --terminal-panel: #08090b;
+  --terminal-panel-strong: #0d0f13;
+  --terminal-border: #24272e;
   --terminal-text: #d8dbe2;
   --terminal-muted: #6f7480;
   --terminal-green: #42c997;
@@ -624,7 +624,7 @@ html[data-theme="terminal"] header,
 html[data-theme="terminal"] nav,
 html[data-theme="terminal"] .bg-\[\#0a0a0c\]\/80,
 html[data-theme="terminal"] .bg-\[\#0a0a0c\]\/90 {
-  background: rgba(16, 17, 21, 0.96) !important;
+  background: rgba(0, 0, 0, 0.96) !important;
   backdrop-filter: blur(12px) !important;
   border-color: var(--terminal-border) !important;
   border-radius: 0 !important;
@@ -704,7 +704,7 @@ html[data-theme="terminal"] .bg-gray-800\/30,
 html[data-theme="terminal"] .bg-gray-800\/50,
 html[data-theme="terminal"] div.bg-gray-800,
 html[data-theme="terminal"] div.bg-gray-700 {
-  background: #0d0f13 !important;
+  background: var(--terminal-panel-strong) !important;
   border: 1px solid var(--terminal-border) !important;
   border-radius: 2px !important;
   box-shadow: none !important;
@@ -884,13 +884,13 @@ html[data-theme="terminal"] .bg-black\/80,
 html[data-theme="terminal"] .bg-black\/50,
 html[data-theme="terminal"] .bg-gray-905\/80,
 html[data-theme="terminal"] .bg-gray-950\/80 {
-  background: rgba(4, 5, 7, 0.92) !important;
+  background: rgba(0, 0, 0, 0.92) !important;
   backdrop-filter: blur(4px) !important;
 }
 
 html[data-theme="terminal"] .theme-option {
   min-height: 112px;
-  background: #0c0e12 !important;
+  background: var(--terminal-panel) !important;
   border-color: var(--terminal-border) !important;
 }
 
@@ -1377,7 +1377,7 @@ html[data-theme="terminal"] select.term-input {
 }
 
 html[data-theme="terminal"] select.term-input option {
-  background: #0d0f13;
+  background: var(--terminal-panel-strong);
   color: var(--terminal-text);
 }
 
@@ -1694,7 +1694,7 @@ html[data-theme="terminal"] .term-toast {
   z-index: 100;
   width: min(360px, calc(100vw - 36px));
   padding: 11px 13px;
-  background: #0d0f13;
+  background: var(--terminal-panel-strong);
   border: 1px solid var(--terminal-green);
   border-radius: 2px;
   box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.35);

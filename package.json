@@ -12,11 +12,14 @@
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
     "android:apk": "npm run android:sync && npm run android:assemble",
-    "android:assemble": "cd android && ./gradlew assembleDebug"
+    "android:assemble": "node scripts/android-assemble.mjs",
+    "ota:package": "node scripts/package-ota.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.0",
+    "@capgo/capacitor-updater": "^8.51.14",
     "@google/genai": "^1.48.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",

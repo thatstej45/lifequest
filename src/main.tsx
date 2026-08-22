@@ -4,8 +4,10 @@ import { Capacitor } from '@capacitor/core';
 import App from './App.tsx';
 import './index.css';
 import { applyTheme, getStoredTheme } from './theme';
+import { initLiveUpdates } from './liveUpdate';
 
 applyTheme(getStoredTheme());
+void initLiveUpdates();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

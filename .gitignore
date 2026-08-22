@@ -19,3 +19,4 @@ android/.idea/
 *.aab
 *.keystore
 *.jks
+mobile-release/

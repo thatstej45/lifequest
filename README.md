@@ -18,7 +18,7 @@ React + Vite life RPG. The `feature/android-sideload` branch wraps the same app 
 
 This is the existing web app inside a native WebView, not a second React project.
 
-**Prerequisites:** [Android Studio](https://developer.android.com/studio) (installs the JDK, Android SDK, and platform tools). Enable **Developer options** and **USB debugging** on the phone.
+**Prerequisites:** JDK 21 (not 26) and the Android SDK. `npm run android:apk` looks for JDK 21 at `~/.local/jdk-21` and the SDK at `~/Library/Android/sdk`.
 
 1. `npm install`
 2. `npm run android:sync` — builds the web app and copies it into `android/`
@@ -34,9 +34,17 @@ npm run android:apk
 The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Transfer it to the device and open it, or install over USB:
 
 ```bash
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+~/Library/Android/sdk/platform-tools/adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 The first sideload requires allowing **Install unknown apps** for Files or Chrome. Debug APKs are signed with the default Android debug key, which is enough for personal devices.
 
-After changing the React UI, run `npm run android:sync` again (or rebuild from Android Studio) so the native shell picks up the new `dist/` assets.
+## GitHub + automatic phone updates
+
+The app repo is [thatstej45/lifequest](https://github.com/thatstej45/lifequest). Every push to `main` runs `.github/workflows/release-mobile.yml`, which:
+
+1. Builds the web app
+2. Publishes an OTA bundle to GitHub Pages (`https://thatstej45.github.io/lifequest/`)
+3. Builds a debug APK artifact you can sideload when native code changes
+
+After the APK that includes the live-update plugin is installed once, later UI/logic pushes update the phone automatically the next time the app is opened (or brought back to the foreground). Native changes (new plugins, permissions, icons) still need a fresh APK install.
