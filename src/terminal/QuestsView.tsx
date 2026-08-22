@@ -24,6 +24,7 @@ import {
   toISODate,
 } from './utils';
 import TerminalCommandPanel from './TerminalCommandPanel';
+import TerminalSelect from './TerminalSelect';
 
 type QuestFilter = 'today' | 'all' | 'daily' | 'weekly' | 'once' | 'done';
 
@@ -325,16 +326,31 @@ function HabitDraftPanel({
         <label>note<input className="term-input" value={draft.note ?? ''} onChange={event => onChange({ ...draft, note: event.target.value })} placeholder="why or how to do it" /></label>
         <IconPicker value={draft.icon ?? 'Target'} onChange={icon => onChange({ ...draft, icon })} label="Habit icon" />
         <label>skill
-          <select className="term-input" value={draft.skillId} onChange={event => onChange({ ...draft, skillId: event.target.value })}>
-            <option value="">select skill</option>
-            {skills.map(skill => <option key={skill.id} value={skill.id} disabled={!skill.isUnlocked}>{skill.category.name} / {skill.name}{skill.isUnlocked ? '' : ' [locked]'}</option>)}
-          </select>
+          <TerminalSelect
+            ariaLabel="Skill"
+            value={draft.skillId}
+            onChange={skillId => onChange({ ...draft, skillId })}
+            placeholder="select skill"
+            options={[
+              { value: '', label: 'select skill' },
+              ...skills.map(skill => ({
+                value: skill.id,
+                label: `${skill.category.name} / ${skill.name}${skill.isUnlocked ? '' : ' [locked]'}`,
+                disabled: !skill.isUnlocked,
+              })),
+            ]}
+          />
         </label>
         <label>routine
-          <select className="term-input" value={draft.routineId ?? ''} onChange={event => onChange({ ...draft, routineId: event.target.value || undefined })}>
-            <option value="">automatic category group</option>
-            {[...routines].sort((a, b) => a.sortOrder - b.sortOrder).map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
-          </select>
+          <TerminalSelect
+            ariaLabel="Routine"
+            value={draft.routineId ?? ''}
+            onChange={routineId => onChange({ ...draft, routineId: routineId || undefined })}
+            options={[
+              { value: '', label: 'automatic category group' },
+              ...[...routines].sort((a, b) => a.sortOrder - b.sortOrder).map(routine => ({ value: routine.id, label: routine.name })),
+            ]}
+          />
         </label>
         <fieldset className="term-fieldset">
           <legend>tracking</legend>

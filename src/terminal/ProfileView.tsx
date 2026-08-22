@@ -145,11 +145,9 @@ export default function ProfileView({
 
       <section className="term-section">
         <h2 className="term-section-title is-blue">native integrations</h2>
-        <p className="term-comment is-nested">{'// these require a future native mobile build; they never affect web scoring'}</p>
         {[
-          ['apple health / health connect', 'read-only placeholder'],
-          ['home-screen widgets', 'installable PWA shortcut available'],
-          ['icloud sync', 'use encrypted export/import on the web'],
+          ['apple health / health connect', 'not connected'],
+          ['icloud sync', 'export/import only'],
         ].map(([name, status]) => (
           <p className="term-stat-line" key={name}>
             <span className="term-stat-label">{name}</span>
@@ -160,9 +158,6 @@ export default function ProfileView({
 
       <section className="term-section">
         <h2 className="term-section-title is-purple">themes</h2>
-        <p className="term-comment is-nested">
-          {`// current theme: ${THEME_OPTIONS.find(option => option.id === theme)?.name}`}
-        </p>
         {THEME_OPTIONS.map(option => (
           <button
             key={option.id}
@@ -201,7 +196,6 @@ export default function ProfileView({
 
       <section className="term-section">
         <h2 className="term-section-title is-amber">system notifications</h2>
-        <p className="term-comment is-nested">{'// notification tune'}</p>
         <div className="term-window-row">
           {[
             { id: 'bling', label: 'bling' },
@@ -231,12 +225,11 @@ export default function ProfileView({
         ) : (
           <p className="term-comment is-nested">{'// notifications are not supported by this browser'}</p>
         )}
-        <p className="term-comment is-nested">{'// active unfinished quests trigger reminders at their configured times'}</p>
+        <p className="term-comment is-nested">{'// unfinished habits remind you at their set times'}</p>
       </section>
 
       <section className="term-section">
         <h2 className="term-section-title is-cyan">app installation</h2>
-        <p className="term-comment is-nested">{'// install for standalone, offline-capable use'}</p>
         <div className="term-copy-row">
           <input className="term-input" readOnly value={window.location.origin} onFocus={event => event.target.select()} />
           <button
@@ -263,7 +256,7 @@ export default function ProfileView({
 
       <section className="term-section">
         <h2 className="term-section-title is-red">data management</h2>
-        <p className="term-comment is-nested">{'// local-first. everything stays in this browser'}</p>
+        <p className="term-comment is-nested">{'// local-first. everything stays on this device'}</p>
         <div className="term-window-row">
           <button type="button" className="term-token is-action" onClick={onRefresh}>
             [refresh/update]

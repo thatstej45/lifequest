@@ -2,6 +2,7 @@ import { FormEvent, useMemo, useState } from 'react';
 import { Goal, Routine, UserStats } from '../types';
 import { HabitIcon, IconPicker } from '../components/icons';
 import TerminalCommandPanel from './TerminalCommandPanel';
+import TerminalSelect from './TerminalSelect';
 import { goalCadence } from './utils';
 
 interface RoutinesViewProps {
@@ -71,18 +72,16 @@ export default function RoutinesView({
         <HabitIcon name={goal.icon ?? 'Target'} size={13} aria-hidden /> {goal.title}
       </span>
       <span className="term-row-inline">{`// ${goal.difficulty ?? 'easy'} · ${goalCadence(goal)}`}</span>
-      <label className="term-assign">
-        <span className="term-assign-label">routine</span>
-        <select
-          className="term-input term-inline-select"
-          value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
-          onChange={event => assign(goal, event.target.value)}
-          aria-label={`Routine for ${goal.title}`}
-        >
-          <option value="">none</option>
-          {sorted.map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
-        </select>
-      </label>
+      <TerminalSelect
+        className="term-inline-select"
+        ariaLabel={`Routine for ${goal.title}`}
+        value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
+        onChange={routineId => assign(goal, routineId)}
+        options={[
+          { value: '', label: 'no routine' },
+          ...sorted.map(routine => ({ value: routine.id, label: routine.name })),
+        ]}
+      />
     </div>
   );
 
@@ -120,8 +119,6 @@ export default function RoutinesView({
       </div>
 
       {draft && !draft.id && routinePanel(draft)}
-
-      {sorted.length === 0 && <p className="term-comment">{'// no routines yet. [+ routine] to build your first block.'}</p>}
 
       {sorted.map((routine, index) => {
         const members = goals
@@ -173,10 +170,7 @@ export default function RoutinesView({
 
       <section className="term-group">
         <div className="term-group-head">
-          <span className="term-group-name is-muted">
-            unassigned habits
-            <span className="term-row-inline">{'// these fall back to their category group'}</span>
-          </span>
+          <span className="term-group-name is-muted">unassigned habits</span>
           <span className="term-group-count">{`[${unassigned.length} habits]`}</span>
         </div>
         {unassigned.length === 0

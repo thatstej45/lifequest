@@ -10,6 +10,7 @@ import {
 } from '../finance/categories';
 import { FinanceRange, isInRange, useFinanceLedger } from '../finance/useFinanceLedger';
 import TerminalCommandPanel from './TerminalCommandPanel';
+import TerminalSelect from './TerminalSelect';
 
 type Section = 'dashboard' | 'budget' | 'transactions' | 'credit' | 'lending' | 'assets';
 type LedgerFilter = 'all' | 'income' | 'expense' | 'transfer' | 'invest';
@@ -102,6 +103,11 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
   const stats = ledger.rangeStats(range);
   const primaryBankId = ledger.bankAccounts[0]?.id ?? 'bank_default';
   const bankName = (id?: string) => ledger.bankAccounts.find(account => account.id === id)?.name ?? 'bank';
+
+  const bankOptions = ledger.bankAccounts.map(account => ({ value: `bank:${account.id}`, label: account.name }));
+  const cashOption = { value: 'cash', label: 'Cash in hand' };
+  const categoryOptions = (categories: FinanceCategoryMeta[]) =>
+    categories.map(category => ({ value: category.id, label: category.name }));
 
   const openModal = (next: NonNullable<ModalState>, initial: Record<string, string> = {}) => {
     setForm(initial);
@@ -758,15 +764,10 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
           >
             <label>amount<input autoFocus className="term-input" type="number" min="0" value={field('amount')} onChange={event => set('amount', event.target.value)} /></label>
             <label>source
-              <select className="term-input" value={field('category', 'salary')} onChange={event => set('category', event.target.value)}>
-                {incomeCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-              </select>
+              <TerminalSelect ariaLabel="Income source" value={field('category', 'salary')} onChange={value => set('category', value)} options={categoryOptions(incomeCategories)} />
             </label>
             <label>credit to
-              <select className="term-input" value={field('account', `bank:${primaryBankId}`)} onChange={event => set('account', event.target.value)}>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-                <option value="cash">Cash in hand</option>
-              </select>
+              <TerminalSelect ariaLabel="Credit to account" value={field('account', `bank:${primaryBankId}`)} onChange={value => set('account', value)} options={[...bankOptions, cashOption]} />
             </label>
             <label>note<input className="term-input" value={field('note')} onChange={event => set('note', event.target.value)} /></label>
             <fieldset className="term-fieldset">
@@ -808,16 +809,19 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
           >
             <label>amount<input autoFocus className="term-input" type="number" min="0" value={field('amount')} onChange={event => set('amount', event.target.value)} /></label>
             <label>category
-              <select className="term-input" value={field('category', 'food')} onChange={event => set('category', event.target.value)}>
-                {expenseCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-              </select>
+              <TerminalSelect ariaLabel="Expense category" value={field('category', 'food')} onChange={value => set('category', value)} options={categoryOptions(expenseCategories)} />
             </label>
             <label>paid from
-              <select className="term-input" value={field('account', `bank:${primaryBankId}`)} onChange={event => set('account', event.target.value)}>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-                <option value="cash">Cash in hand</option>
-                {ledger.creditCards.map(card => <option key={card.id} value={`cc:${card.id}`}>{card.title} (credit)</option>)}
-              </select>
+              <TerminalSelect
+                ariaLabel="Paid from account"
+                value={field('account', `bank:${primaryBankId}`)}
+                onChange={value => set('account', value)}
+                options={[
+                  ...bankOptions,
+                  cashOption,
+                  ...ledger.creditCards.map(card => ({ value: `cc:${card.id}`, label: `${card.title} (credit)` })),
+                ]}
+              />
             </label>
             <fieldset className="term-fieldset">
               <legend>budget group</legend>
@@ -860,16 +864,10 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
           >
             <label>amount<input autoFocus className="term-input" type="number" min="0" value={field('amount')} onChange={event => set('amount', event.target.value)} /></label>
             <label>from
-              <select className="term-input" value={field('from', 'cash')} onChange={event => set('from', event.target.value)}>
-                <option value="cash">Cash in hand</option>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-              </select>
+              <TerminalSelect ariaLabel="Transfer from" value={field('from', 'cash')} onChange={value => set('from', value)} options={[cashOption, ...bankOptions]} />
             </label>
             <label>to
-              <select className="term-input" value={field('to', `bank:${primaryBankId}`)} onChange={event => set('to', event.target.value)}>
-                <option value="cash">Cash in hand</option>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-              </select>
+              <TerminalSelect ariaLabel="Transfer to" value={field('to', `bank:${primaryBankId}`)} onChange={value => set('to', value)} options={[cashOption, ...bankOptions]} />
             </label>
             <label>note<input className="term-input" value={field('note')} onChange={event => set('note', event.target.value)} /></label>
             <div className="term-command-actions">
@@ -913,9 +911,7 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
               </div>
             </fieldset>
             <label>funded from
-              <select className="term-input" value={field('account', `bank:${primaryBankId}`)} onChange={event => set('account', event.target.value)}>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-              </select>
+              <TerminalSelect ariaLabel="Funded from account" value={field('account', `bank:${primaryBankId}`)} onChange={value => set('account', value)} options={bankOptions} />
             </label>
             <label>note<input className="term-input" value={field('note')} onChange={event => set('note', event.target.value)} /></label>
             <div className="term-command-actions">
@@ -959,10 +955,7 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
             <p className="term-comment">{`// paying ${ledger.creditCards.find(card => card.id === modal.cardId)?.title ?? ''}`}</p>
             <label>amount<input autoFocus className="term-input" type="number" min="0" value={field('amount')} onChange={event => set('amount', event.target.value)} /></label>
             <label>pay from
-              <select className="term-input" value={field('source', `bank:${primaryBankId}`)} onChange={event => set('source', event.target.value)}>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-                <option value="cash">Cash in hand</option>
-              </select>
+              <TerminalSelect ariaLabel="Pay from account" value={field('source', `bank:${primaryBankId}`)} onChange={value => set('source', value)} options={[...bankOptions, cashOption]} />
             </label>
             <div className="term-command-actions">
               <button type="button" className="term-token" onClick={close}>[cancel]</button>
@@ -991,10 +984,7 @@ export default function FinanceView({ userStats }: FinanceViewProps) {
             <label>person<input autoFocus className="term-input" value={field('person')} onChange={event => set('person', event.target.value)} /></label>
             <label>amount<input className="term-input" type="number" min="0" value={field('amount')} onChange={event => set('amount', event.target.value)} /></label>
             <label>given from
-              <select className="term-input" value={field('account', `bank:${primaryBankId}`)} onChange={event => set('account', event.target.value)}>
-                {ledger.bankAccounts.map(account => <option key={account.id} value={`bank:${account.id}`}>{account.name}</option>)}
-                <option value="cash">Cash in hand</option>
-              </select>
+              <TerminalSelect ariaLabel="Given from account" value={field('account', `bank:${primaryBankId}`)} onChange={value => set('account', value)} options={[...bankOptions, cashOption]} />
             </label>
             <div className="term-command-actions">
               <button type="button" className="term-token" onClick={close}>[cancel]</button>

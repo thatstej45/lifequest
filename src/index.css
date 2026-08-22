@@ -10,6 +10,36 @@
    Tactile Light Claymorphism Design System Styles
    ========================================================================== */
 
+:root {
+  --clay-blur-card: blur(20px);
+  --clay-blur-nav: blur(24px);
+  --clay-blur-overlay: blur(10px);
+  --clay-card-surface: rgba(255, 255, 255, 0.9);
+  --clay-nav-surface: rgba(255, 255, 255, 0.78);
+  --clay-shadow-card:
+    0px 12px 30px rgba(100, 116, 139, 0.16),
+    0px 2px 4px rgba(100, 116, 139, 0.08),
+    inset -6px -6px 14px rgba(148, 163, 184, 0.18),
+    inset 6px 6px 14px rgba(255, 255, 255, 0.95);
+  --clay-orb-blur: 90px;
+}
+
+/* Mobile WebViews repaint backdrop blur and stacked shadows on every scroll
+   frame, which drops the Android build to single-digit fps. Surfaces become
+   opaque there so scrolling only costs a flat fill. */
+html.is-native,
+html.is-touch {
+  --clay-blur-card: none;
+  --clay-blur-nav: none;
+  --clay-blur-overlay: none;
+  --clay-card-surface: #ffffff;
+  --clay-nav-surface: #f7fafd;
+  --clay-shadow-card:
+    0px 4px 10px rgba(100, 116, 139, 0.14),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.9);
+  --clay-orb-blur: 60px;
+}
+
 /* Soft, puffy clay cards - over-ride dark classes with escaped and attribute selectors */
 .clay-card,
 [class*="bg-gray-900"],
@@ -19,15 +49,11 @@
 [class*="bg-[#121215]"],
 [class*="bg-[#131316]"],
 [class*="bg-[#111114]"] {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(20px) !important;
+  background: var(--clay-card-surface) !important;
+  backdrop-filter: var(--clay-blur-card) !important;
   border: 1.5px solid rgba(203, 213, 225, 0.75) !important;
   border-radius: 24px !important;
-  box-shadow: 
-    0px 12px 30px rgba(100, 116, 139, 0.16), 
-    0px 2px 4px rgba(100, 116, 139, 0.08),
-    inset -6px -6px 14px rgba(148, 163, 184, 0.18), 
-    inset 6px 6px 14px rgba(255, 255, 255, 0.95) !important;
+  box-shadow: var(--clay-shadow-card) !important;
   color: #1e293b !important;
 }
 
@@ -298,8 +324,8 @@ button:disabled {
 header, nav,
 .bg-\[\#0a0a0c\]\/80,
 .bg-\[\#0a0a0c\]\/90 {
-  background: rgba(255, 255, 255, 0.78) !important;
-  backdrop-filter: blur(24px) !important;
+  background: var(--clay-nav-surface) !important;
+  backdrop-filter: var(--clay-blur-nav) !important;
   border-color: rgba(226, 232, 240, 0.8) !important;
   box-shadow: 
     0px 10px 30px rgba(148, 163, 184, 0.12),
@@ -325,7 +351,17 @@ nav a.active, nav button.active {
 .bg-gray-905\/80,
 .bg-gray-950\/80 {
   background: rgba(15, 23, 42, 0.4) !important;
-  backdrop-filter: blur(10px) !important;
+  backdrop-filter: var(--clay-blur-overlay) !important;
+}
+
+/* Touch devices never get a real hover, but sticky hover states still force
+   the lifted transform and its extra shadow layers to repaint after a tap. */
+html.is-touch .clay-card-hover:hover,
+html.is-touch .hover\:border-gray-600:hover,
+html.is-touch .hover\:border-yellow-500\/35:hover,
+html.is-touch .hover\:border-blue-500\/35:hover {
+  transform: none !important;
+  box-shadow: var(--clay-shadow-card) !important;
 }
 
 /* ==========================================================================
@@ -2035,9 +2071,92 @@ html[data-theme="terminal"] .term-habit-value { color: var(--terminal-fg); }
 html[data-theme="terminal"] .term-group-name.is-muted { color: var(--terminal-muted); }
 html[data-theme="terminal"] .term-token { white-space: nowrap; }
 
-html[data-theme="terminal"] .term-assign { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; font-size: 11px; }
-html[data-theme="terminal"] .term-assign-label { color: var(--terminal-muted); }
-html[data-theme="terminal"] .term-inline-select { width: auto; min-width: 96px; padding-block: 1px; font-size: 11px; }
+/* A shell-completion menu instead of the OS dropdown widget. */
+
+html[data-theme="terminal"] .term-select {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+html[data-theme="terminal"] .term-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 7px;
+  background: var(--terminal-panel-strong);
+  border: 1px solid var(--terminal-border);
+  border-radius: 2px;
+  color: var(--terminal-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-select.is-open .term-select-trigger,
+html[data-theme="terminal"] .term-select-trigger:focus-visible {
+  border-color: var(--terminal-green);
+  outline: none;
+}
+
+html[data-theme="terminal"] .term-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme="terminal"] .term-select-caret { color: var(--terminal-muted); font-size: 10px; }
+
+html[data-theme="terminal"] .term-select-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 60;
+  min-width: 100%;
+  max-width: min(320px, 80vw);
+  max-height: 240px;
+  margin: 0;
+  padding: 2px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--terminal-panel-strong);
+  border: 1px solid var(--terminal-green);
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="terminal"] .term-select-list.is-up { top: auto; bottom: calc(100% + 2px); }
+
+html[data-theme="terminal"] .term-select-option {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 6px;
+  background: transparent;
+  border: 0;
+  color: var(--terminal-text);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+html[data-theme="terminal"] .term-select-option.is-active { background: rgba(66, 201, 151, 0.16); }
+html[data-theme="terminal"] .term-select-option.is-selected { color: var(--terminal-green); }
+html[data-theme="terminal"] .term-select-option:disabled { color: var(--terminal-muted); cursor: not-allowed; }
+html[data-theme="terminal"] .term-select-marker { color: var(--terminal-green); white-space: pre; }
+
+html[data-theme="terminal"] .term-inline-select { width: auto; flex: 0 0 auto; margin-left: auto; }
+
+html[data-theme="terminal"] .term-inline-select .term-select-trigger {
+  min-width: 104px;
+  padding-block: 1px;
+  font-size: 11px;
+}
+
+html[data-theme="terminal"] .term-inline-select .term-select-list { left: auto; right: 0; font-size: 11px; }
 
 @media (max-width: 760px) {
   html[data-theme="terminal"] .term-quest-row.is-dense .term-row-inline,
