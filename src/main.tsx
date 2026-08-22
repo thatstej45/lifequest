@@ -1,5 +1,6 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
+import { Capacitor } from '@capacitor/core';
 import App from './App.tsx';
 import './index.css';
 import { applyTheme, getStoredTheme } from './theme';
@@ -12,7 +13,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !Capacitor.isNativePlatform()) {
   const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
   // A first-ever registration claims this page without its code being outdated,
   // so only a controller swap means the running bundle is stale.

@@ -6,3 +6,16 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Android / Capacitor local machine files
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/captive-portal/
+android/local.properties
+android/.idea/
+*.apk
+*.aab
+*.keystore
+*.jks
