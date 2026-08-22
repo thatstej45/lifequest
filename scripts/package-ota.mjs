@@ -9,7 +9,7 @@ const distDir = path.join(root, 'dist');
 const outDir = path.join(root, 'mobile-release');
 const zipPath = path.join(outDir, 'dist.zip');
 const version = process.env.BUNDLE_VERSION;
-const publicBase = process.env.OTA_PUBLIC_BASE ?? 'https://thatstej45.github.io/lifequest';
+const publicBase = process.env.OTA_PUBLIC_BASE ?? 'https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages';
 
 if (!version) {
   console.error('BUNDLE_VERSION is required, e.g. 1.0.12');

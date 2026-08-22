@@ -34,7 +34,7 @@ jobs:
       - name: Package OTA bundle
         env:
           BUNDLE_VERSION: 1.0.${{ github.run_number }}
-          OTA_PUBLIC_BASE: https://thatstej45.github.io/lifequest
+          OTA_PUBLIC_BASE: https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages
         run: node scripts/package-ota.mjs
 
       - name: Publish live-update channel

@@ -44,7 +44,7 @@ The first sideload requires allowing **Install unknown apps** for Files or Chrom
 The app repo is [thatstej45/lifequest](https://github.com/thatstej45/lifequest). Every push to `main` runs `.github/workflows/release-mobile.yml`, which:
 
 1. Builds the web app
-2. Publishes an OTA bundle to GitHub Pages (`https://thatstej45.github.io/lifequest/`)
+2. Publishes an OTA bundle on the `gh-pages` branch (`https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages/`)
 3. Builds a debug APK artifact you can sideload when native code changes
 
 After the APK that includes the live-update plugin is installed once, later UI/logic pushes update the phone automatically the next time the app is opened (or brought back to the foreground). Native changes (new plugins, permissions, icons) still need a fresh APK install.

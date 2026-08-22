@@ -2,7 +2,7 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
-const UPDATE_MANIFEST_URL = 'https://thatstej45.github.io/lifequest/update.json';
+const UPDATE_MANIFEST_URL = 'https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages/update.json';
 
 interface UpdateManifest {
   version: string;
