@@ -155,6 +155,8 @@ export default function TerminalShell({
             userStats={userStats}
             routines={routines}
             goals={goals}
+            goalDailyProgress={goalDailyProgress}
+            onHabitAction={onHabitAction}
             onSaveRoutine={onSaveRoutine}
             onDeleteRoutine={onDeleteRoutine}
             onMoveRoutine={onMoveRoutine}

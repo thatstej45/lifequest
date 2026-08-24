@@ -59,6 +59,12 @@ export interface UserStats {
   pauseMode?: PauseMode;
   pauseUntil?: string;
   appearanceDensity?: AppearanceDensity;
+  /** 1–3 identity statements the user is building evidence for. */
+  identityStatements?: string[];
+  /** Habits completed on the day after a scheduled miss (never-miss-twice). */
+  recoveryDaysCompleted?: number;
+  /** Days where at least one habit entered recovery (missed prior scheduled day). */
+  recoveryAttempts?: number;
 }
 
 export interface Goal {
@@ -85,6 +91,14 @@ export interface Goal {
   unit?: string;
   routineId?: string;
   sortOrder?: number;
+  /** Index into UserStats.identityStatements (0–2). */
+  identityStatementIndex?: number;
+  /** Cue location for implementation intention sentence. */
+  cueLocation?: string;
+  /** Within the same routine, start after this habit completes. */
+  stackAfterGoalId?: string;
+  /** Starter/minimum target for two-minute mode (counter/numeric/timer). */
+  twoMinuteTarget?: number;
 }
 
 export interface Routine {
@@ -107,6 +121,9 @@ export interface GoalDailyProgress {
   appliedXp?: number;
   completedAt?: string;
   historyEntryId?: string;
+  /** Logged via two-minute rule without reaching full target. */
+  twoMinuteLogged?: boolean;
+  completionMode?: 'full' | 'twoMinute';
 }
 
 export interface CategoryConsistency {
@@ -123,6 +140,8 @@ export interface HistoryRecord {
   goalMet?: boolean;
   shieldUsed?: boolean;
   paused?: boolean;
+  /** User completed at least one habit in never-miss-twice recovery this day. */
+  recoveryDay?: boolean;
 }
 
 export interface CompletedQuest {

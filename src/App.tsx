@@ -117,7 +117,15 @@ import {
   isGoalScheduled,
   resolveDailyStreak,
   trackingMode,
+  countsForDailyGoal,
+  computeAppliedXpForProgress,
+  identityVoteMessage,
+  formatImplementationIntention,
+  recoveryGoals,
+  twoMinuteXpFromFull,
 } from './habits/habitDomain';
+import RoutineRunner from './components/RoutineRunner';
+import { trajectorySnapshot, recoveryRate } from './analytics';
 
 import { Howl } from 'howler';
 
@@ -680,8 +688,20 @@ const ClayHabitControls = ({
     : progress?.value ?? 0;
   const target = goal.targetValue ?? 1;
   const percent = habitProgressPercent(goal, progress, now);
+  const twoMinuteDone = Boolean(progress?.twoMinuteLogged) && !isHabitComplete(goal, progress, now);
 
-  if (mode === 'checkbox') return null;
+  if (mode === 'checkbox') {
+    if (isHabitComplete(goal, progress, now)) return null;
+    return (
+      <button
+        type="button"
+        className="mt-1 rounded-lg border border-amber-300/40 bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-400"
+        onClick={() => onAction({ type: 'two-minute' })}
+      >
+        Log 2-min version
+      </button>
+    );
+  }
   if (mode === 'health') {
     return <p className="text-[9px] text-amber-500 font-bold">Native health sync unavailable on web · non-scoring</p>;
   }
@@ -709,6 +729,11 @@ const ClayHabitControls = ({
             </button>
             <button type="button" className="px-2 py-1 rounded-lg bg-slate-200" onClick={() => onAction({ type: 'reset' })}>Reset</button>
           </>
+        )}
+        {!isHabitComplete(goal, progress, now) && (
+          <button type="button" className="px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-700" onClick={() => onAction({ type: 'two-minute' })}>
+            {twoMinuteDone ? '2-min ✓' : '2-min'}
+          </button>
         )}
       </div>
       <ProgressBar value={percent} max={100} color="#10b981" className="h-1.5" />
@@ -819,6 +844,9 @@ const QuestItem = ({
             isRepeatable={goal.repeatType === 'daily' || goal.repeatType === 'weekly' || goal.isRepeatable} 
           />
           {goal.note && <p className="text-[9px] text-gray-500">{goal.note}</p>}
+          {formatImplementationIntention(goal) && (
+            <p className="text-[9px] italic text-blue-400/80">{formatImplementationIntention(goal)}</p>
+          )}
           <ClayHabitControls goal={goal} progress={progress} onAction={action => onHabitAction(goal.id, action)} />
         </div>
         
@@ -1599,6 +1627,9 @@ export default function App() {
               shieldProgress: savedStats.shieldProgress ?? 0,
               pauseMode: savedStats.pauseMode ?? 'none',
               appearanceDensity: savedStats.appearanceDensity ?? 'cozy',
+              identityStatements: savedStats.identityStatements ?? [],
+              recoveryDaysCompleted: savedStats.recoveryDaysCompleted ?? 0,
+              recoveryAttempts: savedStats.recoveryAttempts ?? 0,
             });
             setCategories(uniqueCategories.map(category => ({
               ...category,
@@ -1631,6 +1662,9 @@ export default function App() {
               shieldProgress: savedStats.shieldProgress ?? 0,
               pauseMode: savedStats.pauseMode ?? 'none',
               appearanceDensity: savedStats.appearanceDensity ?? 'cozy',
+              identityStatements: savedStats.identityStatements ?? [],
+              recoveryDaysCompleted: savedStats.recoveryDaysCompleted ?? 0,
+              recoveryAttempts: savedStats.recoveryAttempts ?? 0,
             });
             setCategories(uniqueCategories);
             setGoals(uniqueGoals.map((goal, index) => ({
@@ -1731,6 +1765,7 @@ export default function App() {
         (!userStats.pauseUntil || userStats.pauseUntil >= lastLogin);
       const goalMet = previousRecord?.goalMet ?? previousSummary.met;
       const shieldProtects = !goalMet && !paused && (userStats.streakShields ?? 0) > 0;
+      const recoveringToday = recoveryGoals(goals, goalDailyProgress, today);
 
       setUserStats(curr => {
         const resolved = resolveDailyStreak(curr, { goalMet, paused });
@@ -1739,17 +1774,28 @@ export default function App() {
           lastLoginDate: today,
           lastDailyGoalDate: lastLogin,
           xpMultiplier: getQuestMultiplier(resolved.streak),
+          recoveryAttempts: recoveringToday.length > 0
+            ? (curr.recoveryAttempts ?? 0) + 1
+            : curr.recoveryAttempts ?? 0,
         };
       });
+
+      const progressByGoalDate = new Map(
+        goalDailyProgress.map(item => [`${item.goalId}:${item.date}`, item]),
+      );
 
       setGoals(prev => {
         const updatedGoals = prev.map(goal => {
           const isDaily = goal.repeatType === 'daily' || goal.isRepeatable;
           const isWeekly = goal.repeatType === 'weekly';
-          
+          const yesterdayProgress = progressByGoalDate.get(`${goal.id}:${lastLogin}`);
+          const loggedYesterday = yesterdayProgress
+            ? countsForDailyGoal(goal, yesterdayProgress, new Date(`${lastLogin}T12:00:00`))
+            : goal.completed;
+
           if (isDaily) {
             let newStreak = goal.streak || 0;
-            if (!goal.completed && !shieldProtects && !paused) {
+            if (!loggedYesterday && !shieldProtects && !paused) {
               newStreak = 0;
             }
             return { ...goal, completed: false, streak: newStreak };
@@ -1832,6 +1878,12 @@ export default function App() {
   const [editingQuest, setEditingQuest] = useState<Goal | null>(null);
   const [newQuestReminders, setNewQuestReminders] = useState<string[]>([]);
   const [newQuestReminderFreq, setNewQuestReminderFreq] = useState<'once' | 'multiple'>('once');
+  const [newQuestCueLocation, setNewQuestCueLocation] = useState('');
+  const [newQuestIdentityIndex, setNewQuestIdentityIndex] = useState<number | undefined>(undefined);
+  const [newQuestStackAfterGoalId, setNewQuestStackAfterGoalId] = useState('');
+  const [newQuestTwoMinuteTarget, setNewQuestTwoMinuteTarget] = useState<number | undefined>(undefined);
+  const [settingsIdentityStatements, setSettingsIdentityStatements] = useState<string[]>(['', '', '']);
+  const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
   const lastReminderRef = useRef<Record<string, string>>({}); // goalId -> HH:mm to avoid duplicate triggers
   const lastCheckedMinute = useRef<string>("");
   const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
@@ -1853,6 +1905,10 @@ export default function App() {
     setNewQuestIcon(editingQuest.icon ?? 'Target');
     setNewQuestNote(editingQuest.note ?? '');
     setNewQuestRoutineId(editingQuest.routineId ?? '');
+    setNewQuestCueLocation(editingQuest.cueLocation ?? '');
+    setNewQuestIdentityIndex(editingQuest.identityStatementIndex);
+    setNewQuestStackAfterGoalId(editingQuest.stackAfterGoalId ?? '');
+    setNewQuestTwoMinuteTarget(editingQuest.twoMinuteTarget);
   }, [editingQuest]);
 
   useEffect(() => {
@@ -1863,6 +1919,10 @@ export default function App() {
     setNewQuestIcon('Target');
     setNewQuestNote('');
     setNewQuestRoutineId('');
+    setNewQuestCueLocation('');
+    setNewQuestIdentityIndex(undefined);
+    setNewQuestStackAfterGoalId('');
+    setNewQuestTwoMinuteTarget(undefined);
   }, [editingQuest, isAddingQuest]);
 
   // Request notification permissions
@@ -1887,13 +1947,13 @@ export default function App() {
       goalDailyProgress.filter(item => item.date === today).map(item => [item.goalId, item]),
     );
     const todaysQuests = goals.filter(goal => trackingMode(goal) !== 'health' && isGoalScheduled(goal, now));
-    const completedCount = todaysQuests.filter(goal => isHabitComplete(goal, progressMap.get(goal.id), now)).length;
+    const completedCount = todaysQuests.filter(goal => countsForDailyGoal(goal, progressMap.get(goal.id), now)).length;
     const totalCount = todaysQuests.length;
 
     // Category specific consistency
     const categoryStats = categories.map(cat => {
       const catQuests = todaysQuests.filter(g => cat.skills.some(s => s.id === g.skillId));
-      const catCompleted = catQuests.filter(goal => isHabitComplete(goal, progressMap.get(goal.id), now)).length;
+      const catCompleted = catQuests.filter(goal => countsForDailyGoal(goal, progressMap.get(goal.id), now)).length;
       const catTotal = catQuests.length;
       return {
         categoryId: cat.id,
@@ -1917,6 +1977,7 @@ export default function App() {
     if (!isLoaded) return;
     const updateHistory = async () => {
       const today = dateKey();
+      const recoveryToday = recoveryGoals(goals, goalDailyProgress, today).length > 0;
       const record = {
         date: today,
         completedCount: consistencyStats.total.consistency,
@@ -1924,6 +1985,7 @@ export default function App() {
         goalMet: consistencyStats.total.maxConsistency > 0 &&
           (consistencyStats.total.consistency / consistencyStats.total.maxConsistency) * 100 >= (userStats.dailyGoalTarget ?? 60),
         paused: userStats.pauseMode !== 'none',
+        recoveryDay: recoveryToday,
       };
       await db.history.put(record);
       setHistory(prev => {
@@ -1943,6 +2005,8 @@ export default function App() {
     isLoaded,
     userStats.dailyGoalTarget,
     userStats.pauseMode,
+    goals,
+    goalDailyProgress,
   ]);
 
   useEffect(() => {
@@ -2001,6 +2065,11 @@ export default function App() {
       setSettingsTitle(userStats.title || 'Master of Life Skills');
       setSettingsPersonality(userStats.mentorPersonality || 'Sarcastic');
       setSettingsTheme(theme);
+      setSettingsIdentityStatements([
+        userStats.identityStatements?.[0] ?? '',
+        userStats.identityStatements?.[1] ?? '',
+        userStats.identityStatements?.[2] ?? '',
+      ]);
     }
   }, [isSettingsOpen, userStats, theme]);
 
@@ -2079,11 +2148,16 @@ export default function App() {
   };
 
   const handleSaveSettings = async () => {
+    const identityStatements = settingsIdentityStatements
+      .map(statement => statement.trim())
+      .filter(Boolean)
+      .slice(0, 3);
     setUserStats(prev => ({
       ...prev,
       name: settingsName,
       title: settingsTitle,
-      mentorPersonality: settingsPersonality
+      mentorPersonality: settingsPersonality,
+      identityStatements,
     }));
     setTheme(settingsTheme);
     
@@ -2094,6 +2168,12 @@ export default function App() {
       xp: 0 
     });
   };
+
+  const trajectory = useMemo(() => trajectorySnapshot(history), [history]);
+  const recoveringHabits = useMemo(
+    () => recoveryGoals(goals, goalDailyProgress),
+    [goals, goalDailyProgress],
+  );
 
   // Auto-clear notification
   useEffect(() => {
@@ -2269,15 +2349,20 @@ export default function App() {
     });
   }, [categories]);
 
-  const toggleGoalCompletion = useCallback((goalId: string) => {
-    const goal = goals.find(item => item.id === goalId);
-    if (!goal) return;
-    const isCompleting = !goal.completed;
-    const now = new Date();
+  const syncHabitProgress = useCallback((
+    goal: Goal,
+    prevProgress: GoalDailyProgress | undefined,
+    nextProgress: GoalDailyProgress,
+    now: Date,
+  ): GoalDailyProgress => {
     const today = dateKey(now);
-    let newStreak = goal.streak ?? 0;
+    const skill = categories.flatMap(category => category.skills).find(item => item.id === goal.skillId);
+    const wasLogged = countsForDailyGoal(goal, prevProgress, now);
+    const isLogged = countsForDailyGoal(goal, nextProgress, now);
+    const isFullyComplete = isHabitComplete(goal, nextProgress, now);
 
-    if (isCompleting) {
+    let newStreak = goal.streak ?? 0;
+    if (isLogged && !wasLogged) {
       if (!goal.lastCompletedAt) newStreak = 1;
       else {
         const diffDays = Math.floor(
@@ -2286,92 +2371,106 @@ export default function App() {
         if (diffDays === 1) newStreak += 1;
         else if (diffDays > 1) newStreak = 1;
       }
-    } else if (newStreak > 0) {
+    } else if (!isLogged && wasLogged && newStreak > 0) {
       newStreak -= 1;
     }
 
-    const skill = categories.flatMap(category => category.skills).find(item => item.id === goal.skillId);
-    const appliedXp = isCompleting
-      ? calculateQuestReward(goal, newStreak, skill?.specialization)
-      : goal.appliedXp ?? 0;
-    const xpChange = isCompleting ? appliedXp : -appliedXp;
-    const playerProgress = applyXp(userStats.level, userStats.xp, xpChange);
+    const fullReward = calculateQuestReward(goal, newStreak, skill?.specialization);
+    const newApplied = computeAppliedXpForProgress(fullReward, nextProgress);
+    const oldApplied = prevProgress?.appliedXp ?? 0;
+    const xpChange = newApplied - oldApplied;
+    const syncedProgress: GoalDailyProgress = {
+      ...nextProgress,
+      appliedXp: newApplied > 0 ? newApplied : undefined,
+    };
 
-    setGoals(prev => prev.map(item => item.id === goalId ? {
-      ...item,
-      completed: isCompleting,
-      lastCompletedAt: isCompleting ? today : item.lastCompletedAt,
-      streak: newStreak,
-      appliedXp: isCompleting ? appliedXp : 0,
-    } : item));
-    setUserStats({
-      ...userStats,
-      xp: playerProgress.xp,
-      level: playerProgress.level,
-      maxXp: playerProgress.maxXp,
-      skillPoints: Math.max(0, userStats.skillPoints + playerProgress.levelsChanged),
-      xpMultiplier: streakMultiplier(userStats.streak),
-      progressionVersion: PROGRESSION_VERSION,
-    });
-    setCategories(categories.map(category => ({
-      ...category,
-      skills: category.skills.map(item => {
-        if (item.id !== goal.skillId) return item;
-        const progress = applyXp(item.level, item.xp, xpChange);
-        return { ...item, xp: progress.xp, level: progress.level, maxXp: progress.maxXp };
-      }),
-    })));
-
-    if (isCompleting) {
-      playSound('questComplete');
-      const historyEntry: CompletedQuest = {
-        id: `${goalId}-${Date.now()}`,
-        goalId,
-        title: goal.title,
-        skillId: goal.skillId,
-        xpEarned: appliedXp,
-        completedAt: now.toISOString(),
-        scheduledTime: goal.reminderTimes?.[0],
-      };
-      void db.questHistory.add(historyEntry);
-      setQuestHistory(prev => [historyEntry, ...prev]);
-      setGoalDailyProgress(prev => {
-        const current = prev.find(item => item.id === `${goalId}:${today}`) ?? emptyProgress(goalId, today);
-        const next = {
-          ...current,
-          value: trackingMode(goal) === 'checkbox' ? 1 : current.value,
-          completed: true,
-          appliedXp,
-          completedAt: historyEntry.completedAt,
-          historyEntryId: historyEntry.id,
-        };
-        return [...prev.filter(item => item.id !== next.id), next];
-      });
-      setNotification({ message: goal.title, xp: appliedXp });
+    if (xpChange !== 0) {
+      const playerProgress = applyXp(userStats.level, userStats.xp, xpChange);
+      const inRecovery = recoveryGoals([goal], goalDailyProgress, today).some(item => item.id === goal.id);
+      setUserStats(prev => ({
+        ...prev,
+        xp: playerProgress.xp,
+        level: playerProgress.level,
+        maxXp: playerProgress.maxXp,
+        skillPoints: Math.max(0, prev.skillPoints + playerProgress.levelsChanged),
+        xpMultiplier: streakMultiplier(prev.streak),
+        progressionVersion: PROGRESSION_VERSION,
+        recoveryDaysCompleted: isLogged && !wasLogged && inRecovery
+          ? (prev.recoveryDaysCompleted ?? 0) + 1
+          : prev.recoveryDaysCompleted,
+      }));
+      setCategories(prev => prev.map(category => ({
+        ...category,
+        skills: category.skills.map(item => {
+          if (item.id !== goal.skillId) return item;
+          const skillProgress = applyXp(item.level, item.xp, xpChange);
+          return { ...item, xp: skillProgress.xp, level: skillProgress.level, maxXp: skillProgress.maxXp };
+        }),
+      })));
+      if (xpChange > 0) playSound('questComplete');
       if (playerProgress.levelsChanged > 0) {
         playSound('levelUp');
         setNotification({
           title: `Level ${playerProgress.level}! +${playerProgress.levelsChanged} SP`,
           message: `${playerProgress.xp}/${playerProgress.maxXp} XP · ${playerProgress.maxXp - playerProgress.xp} to next level`,
-          xp: appliedXp,
+          xp: xpChange,
         });
       }
-    } else {
-      const entry = questHistory.find(item => item.goalId === goalId && item.completedAt.startsWith(today));
+    }
+
+    setGoals(prev => prev.map(item => item.id === goal.id ? {
+      ...item,
+      completed: isFullyComplete,
+      lastCompletedAt: isLogged ? today : item.lastCompletedAt,
+      streak: newStreak,
+      appliedXp: newApplied,
+    } : item));
+
+    if (isLogged && !wasLogged) {
+      const historyEntry: CompletedQuest = {
+        id: `${goal.id}-${Date.now()}`,
+        goalId: goal.id,
+        title: goal.title,
+        skillId: goal.skillId,
+        xpEarned: newApplied,
+        completedAt: now.toISOString(),
+        scheduledTime: goal.reminderTimes?.[0],
+      };
+      void db.questHistory.add(historyEntry);
+      setQuestHistory(prev => [historyEntry, ...prev]);
+      syncedProgress.historyEntryId = historyEntry.id;
+      syncedProgress.completedAt = historyEntry.completedAt;
+      const identityMsg = identityVoteMessage(goal, userStats.identityStatements);
+      setNotification({
+        message: identityMsg ? `${goal.title} · ${identityMsg}` : goal.title,
+        xp: newApplied,
+      });
+    } else if (!isLogged && wasLogged) {
+      const entryId = prevProgress?.historyEntryId;
+      const entry = entryId
+        ? questHistory.find(item => item.id === entryId)
+        : questHistory.find(item => item.goalId === goal.id && item.completedAt.startsWith(today));
       if (entry) {
         void db.questHistory.delete(entry.id);
         setQuestHistory(prev => prev.filter(item => item.id !== entry.id));
       }
-      setGoalDailyProgress(prev => prev.map(item => item.id === `${goalId}:${today}` ? {
-        ...item,
-        value: trackingMode(goal) === 'checkbox' ? 0 : item.value,
-        completed: false,
-        appliedXp: undefined,
-        completedAt: undefined,
-        historyEntryId: undefined,
-      } : item));
+      delete syncedProgress.historyEntryId;
+      delete syncedProgress.completedAt;
+      delete syncedProgress.appliedXp;
+    } else if (isLogged && wasLogged && newApplied !== oldApplied && prevProgress?.historyEntryId) {
+      const entry = questHistory.find(item => item.id === prevProgress.historyEntryId);
+      if (entry) {
+        const updated = { ...entry, xpEarned: newApplied };
+        void db.questHistory.put(updated);
+        setQuestHistory(prev => prev.map(item => item.id === entry.id ? updated : item));
+      }
+      if (xpChange > 0) {
+        setNotification({ message: goal.title, xp: xpChange });
+      }
     }
-  }, [categories, goals, questHistory, userStats]);
+
+    return syncedProgress;
+  }, [categories, goalDailyProgress, questHistory, userStats]);
 
   const handleHabitAction = useCallback((goalId: string, action: HabitAction) => {
     const goal = goals.find(item => item.id === goalId);
@@ -2379,12 +2478,14 @@ export default function App() {
     const now = new Date();
     const today = dateKey(now);
     const current = goalDailyProgress.find(item => item.id === `${goalId}:${today}`);
-    const wasComplete = isHabitComplete(goal, current, now);
     const next = applyHabitAction(goal, current, action, now);
-    const isComplete = isHabitComplete(goal, next, now);
-    setGoalDailyProgress(prev => [...prev.filter(item => item.id !== next.id), next]);
-    if (wasComplete !== isComplete) toggleGoalCompletion(goalId);
-  }, [goalDailyProgress, goals, toggleGoalCompletion]);
+    const synced = syncHabitProgress(goal, current, next, now);
+    setGoalDailyProgress(prev => [...prev.filter(item => item.id !== synced.id), synced]);
+  }, [goalDailyProgress, goals, syncHabitProgress]);
+
+  const toggleGoalCompletion = useCallback((goalId: string) => {
+    handleHabitAction(goalId, { type: 'toggle' });
+  }, [handleHabitAction]);
 
   useEffect(() => {
     if (!isLoaded || !goalDailyProgress.some(item => item.timerStartedAt && !item.completed)) return;
@@ -2483,7 +2584,7 @@ export default function App() {
             // App-level notification (Toast)
             setNotification({ 
               title: "Quest Reminder",
-              message: goal.title,
+              message: formatImplementationIntention(goal) ?? goal.title,
               xp: 0 
             });
             playSound('notification');
@@ -2900,6 +3001,11 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
+              {recoveringHabits.length > 0 && (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  <strong>Never miss twice:</strong> {recoveringHabits.length} habit{recoveringHabits.length === 1 ? '' : 's'} missed yesterday — log a 2-min or full version today.
+                </div>
+              )}
               {/* Daily Check-in Card */}
               <DailyCheckIn 
                 userStats={userStats}
@@ -3569,6 +3675,7 @@ export default function App() {
               <ClayRoutinesView
                 routines={routines}
                 goals={goals}
+                onRunRoutine={setRunningRoutineId}
                 onSaveRoutine={routine => {
                   setRoutines(previous => previous.some(item => item.id === routine.id)
                     ? previous.map(item => item.id === routine.id ? routine : item)
@@ -3591,6 +3698,17 @@ export default function App() {
                 }}
                 onSaveGoal={goal => setGoals(previous => previous.map(item => item.id === goal.id ? goal : item))}
               />
+              {runningRoutineId && routines.find(item => item.id === runningRoutineId) && (
+                <RoutineRunner
+                  routine={routines.find(item => item.id === runningRoutineId)!}
+                  goals={goals}
+                  progress={goalDailyProgress}
+                  today={dateKey()}
+                  onHabitAction={handleHabitAction}
+                  onClose={() => setRunningRoutineId(null)}
+                  theme="clay"
+                />
+              )}
             </motion.div>
           )}
 
@@ -3603,6 +3721,23 @@ export default function App() {
               className="space-y-6"
             >
               <h2 className="text-2xl font-black italic">DETAILED STATS</h2>
+              <div className="clay-card space-y-2 p-4">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Trajectory</h3>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {trajectory.windows.map(window => (
+                    <div key={window.days} className="rounded-xl bg-white/80 p-2">
+                      <p className="text-[9px] font-bold uppercase text-slate-400">{window.days}d</p>
+                      <p className="text-sm font-black text-slate-800">{Math.round(window.ratio * 100)}%</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] font-medium text-slate-500">
+                  Trend: {trajectory.trend === 'up' ? '↑ improving' : trajectory.trend === 'down' ? '↓ slipping' : '→ steady'}
+                  {' · '}
+                  Recovery rate: {Math.round(recoveryRate(userStats.recoveryDaysCompleted, userStats.recoveryAttempts) * 100)}%
+                  ({userStats.recoveryDaysCompleted ?? 0}/{userStats.recoveryAttempts ?? 0})
+                </p>
+              </div>
               <div className="space-y-4">
                 <div className="bg-white/70 rounded-2xl border border-white p-4 shadow-sm">
                   <ContributionHeatmap history={history} window={365} title="Yearly contributions" />
@@ -3737,6 +3872,26 @@ export default function App() {
                         />
                       </div>
                     </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Identity Statements</h3>
+                    <p className="text-[10px] text-gray-500">1–3 statements you want your habits to vote for (e.g. “I am a runner”).</p>
+                    {settingsIdentityStatements.map((statement, index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        value={statement}
+                        maxLength={80}
+                        placeholder={`Identity ${index + 1}`}
+                        onChange={event => {
+                          const next = [...settingsIdentityStatements];
+                          next[index] = event.target.value;
+                          setSettingsIdentityStatements(next);
+                        }}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+                      />
+                    ))}
                   </section>
 
                   <section className="space-y-4">
@@ -4822,6 +4977,41 @@ export default function App() {
                     {[...routines].sort((a, b) => a.sortOrder - b.sortOrder).map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
                   </select>
                 </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-gray-500">Cue location</label>
+                  <input className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white" value={newQuestCueLocation} onChange={event => setNewQuestCueLocation(event.target.value)} placeholder="kitchen, desk, gym…" />
+                  {(newQuestCueLocation || newQuestReminders.length > 0) && newQuestTitle && (
+                    <p className="text-[9px] italic text-blue-400/80">
+                      {formatImplementationIntention({ id: '', skillId: '', title: newQuestTitle, completed: false, xpReward: 0, cueLocation: newQuestCueLocation, reminderTimes: newQuestReminders } as Goal)}
+                    </p>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500">Identity vote</label>
+                    <select className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white" value={newQuestIdentityIndex ?? ''} onChange={event => setNewQuestIdentityIndex(event.target.value === '' ? undefined : Number(event.target.value))}>
+                      <option value="">None</option>
+                      {(userStats.identityStatements ?? []).map((statement, index) => (
+                        <option key={index} value={index}>{statement || `Identity ${index + 1}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500">2-min target</label>
+                    <input className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white" type="number" min="1" value={newQuestTwoMinuteTarget ?? ''} onChange={event => setNewQuestTwoMinuteTarget(event.target.value ? Math.max(1, Number(event.target.value)) : undefined)} placeholder="starter amount" />
+                  </div>
+                </div>
+                {newQuestRoutineId && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500">Stack after</label>
+                    <select className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white" value={newQuestStackAfterGoalId} onChange={event => setNewQuestStackAfterGoalId(event.target.value)}>
+                      <option value="">No stack anchor</option>
+                      {goals.filter(goal => goal.routineId === newQuestRoutineId && goal.id !== editingQuest?.id).map(goal => (
+                        <option key={goal.id} value={goal.id}>{goal.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3 overflow-visible relative">
                   <div className="space-y-1 relative z-50">
                     <label className="text-[10px] font-bold uppercase text-gray-500">Skill</label>
@@ -5072,7 +5262,11 @@ export default function App() {
                         isRepeatable: newQuestRepeatType !== 'none',
                         skillId: manualQuestSkillId,
                         reminderTimes: newQuestReminders,
-                        reminderFrequency: newQuestReminderFreq
+                        reminderFrequency: newQuestReminderFreq,
+                        cueLocation: newQuestCueLocation.trim() || undefined,
+                        identityStatementIndex: newQuestIdentityIndex,
+                        stackAfterGoalId: newQuestStackAfterGoalId || undefined,
+                        twoMinuteTarget: newQuestTwoMinuteTarget,
                       } : g));
                       setNotification({ title: "Success", message: "Quest updated!", xp: 0 });
                     } else {
@@ -5097,7 +5291,11 @@ export default function App() {
                         repeatDays: newQuestRepeatType === 'weekly' ? newQuestRepeatDays : undefined,
                         isRepeatable: newQuestRepeatType !== 'none',
                         reminderTimes: newQuestReminders.filter(t => t && t.includes(':')),
-                        reminderFrequency: newQuestReminderFreq
+                        reminderFrequency: newQuestReminderFreq,
+                        cueLocation: newQuestCueLocation.trim() || undefined,
+                        identityStatementIndex: newQuestIdentityIndex,
+                        stackAfterGoalId: newQuestStackAfterGoalId || undefined,
+                        twoMinuteTarget: newQuestTwoMinuteTarget,
                       };
                       setGoals(prev => [newGoal, ...prev]);
                       setNotification({ title: "Success", message: "New quest created!", xp: 0 });
@@ -5118,6 +5316,10 @@ export default function App() {
                     setManualQuestSkillId('');
                     setNewQuestReminders([]);
                     setNewQuestReminderFreq('once');
+                    setNewQuestCueLocation('');
+                    setNewQuestIdentityIndex(undefined);
+                    setNewQuestStackAfterGoalId('');
+                    setNewQuestTwoMinuteTarget(undefined);
                   }}
                   className={cn(
                     "w-full py-4 font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 mt-4",

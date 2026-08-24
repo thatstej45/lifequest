@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Category, CompletedQuest, Goal, GoalDailyProgress, HistoryRecord, UserStats } from '../types';
-import { perHabitSummary } from '../analytics';
+import { perHabitSummary, trajectorySnapshot, recoveryRate } from '../analytics';
 import {
   ContributionHeatmap,
   MonthCalendar,
@@ -105,6 +105,7 @@ export default function StatsView({
   const worstDay = byWeekday
     .filter(day => day.samples > 0)
     .reduce((worst, day) => (day.ratio < worst.ratio ? day : worst), bestDay);
+  const trajectory = useMemo(() => trajectorySnapshot(history), [history]);
 
   return (
     <>
@@ -177,6 +178,24 @@ export default function StatsView({
           ))}
         </section>
       )}
+
+      <section className="term-section">
+        <h2 className="term-section-title is-cyan">trajectory</h2>
+        <p className="term-comment is-nested">{'// rolling completion rates and trend direction'}</p>
+        {trajectory.windows.map(window => (
+          <Line key={window.days} label={`${window.days}-day rate`} value={`${asPercent(window.ratio)} · ${window.trackedDays}d tracked`} tone={ratioTone(window.ratio)} />
+        ))}
+        <Line
+          label="trend vs prior week"
+          value={`${trajectory.trend === 'up' ? '↑ improving' : trajectory.trend === 'down' ? '↓ slipping' : '→ steady'} (${trajectory.trendDelta >= 0 ? '+' : ''}${Math.round(trajectory.trendDelta * 100)}pp)`}
+          tone={trajectory.trend === 'up' ? 'good' : trajectory.trend === 'down' ? 'bad' : 'cyan'}
+        />
+        <Line
+          label="recovery rate"
+          value={`${asPercent(recoveryRate(userStats.recoveryDaysCompleted, userStats.recoveryAttempts))} · ${userStats.recoveryDaysCompleted ?? 0}/${userStats.recoveryAttempts ?? 0}`}
+          tone="purple"
+        />
+      </section>
 
       <section className="term-section">
         <h2 className="term-section-title is-amber">streaks</h2>

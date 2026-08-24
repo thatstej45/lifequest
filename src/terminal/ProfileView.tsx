@@ -49,14 +49,21 @@ export default function ProfileView({
 }: ProfileViewProps) {
   const [name, setName] = useState(userStats.name ?? 'Player One');
   const [title, setTitle] = useState(userStats.title ?? 'Master of Life Skills');
+  const [identityDraft, setIdentityDraft] = useState<[string, string, string]>(['', '', '']);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setName(userStats.name ?? 'Player One');
     setTitle(userStats.title ?? 'Master of Life Skills');
-  }, [userStats.name, userStats.title]);
+    setIdentityDraft([
+      userStats.identityStatements?.[0] ?? '',
+      userStats.identityStatements?.[1] ?? '',
+      userStats.identityStatements?.[2] ?? '',
+    ]);
+  }, [userStats.name, userStats.title, userStats.identityStatements]);
 
-  const dirty = name !== (userStats.name ?? '') || title !== (userStats.title ?? '');
+  const dirty = name !== (userStats.name ?? '') || title !== (userStats.title ?? '') ||
+    identityDraft.some((statement, index) => statement !== (userStats.identityStatements?.[index] ?? ''));
 
   return (
     <>
@@ -98,10 +105,39 @@ export default function ProfileView({
           type="button"
           className="term-token is-action"
           disabled={!dirty}
-          onClick={() => onSaveIdentity(name.trim() || 'Player One', title.trim())}
+          onClick={() => {
+            onSaveIdentity(name.trim() || 'Player One', title.trim());
+            onUpdateHabitSettings({
+              identityStatements: identityDraft.map(statement => statement.trim()).filter(Boolean).slice(0, 3),
+            });
+          }}
         >
           [save]
         </button>
+      </section>
+
+      <section className="term-section">
+        <h2 className="term-section-title is-purple">identity statements</h2>
+        <p className="term-comment is-nested">{'// 1–3 statements your habits vote for'}</p>
+        {[0, 1, 2].map(index => (
+          <div className="term-field" key={index}>
+            <label className="term-field-label" htmlFor={`term-identity-${index}`}>
+              {`statement ${index + 1}`}
+            </label>
+            <input
+              id={`term-identity-${index}`}
+              className="term-input"
+              maxLength={80}
+              value={identityDraft[index]}
+              onChange={event => {
+                const next = [...identityDraft] as [string, string, string];
+                next[index] = event.target.value;
+                setIdentityDraft(next);
+              }}
+              placeholder="I am a person who…"
+            />
+          </div>
+        ))}
       </section>
 
       <section className="term-section">

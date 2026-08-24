@@ -8,6 +8,7 @@ export * from './trends';
 export * from './calendar';
 export * from './heatmap';
 export * from './habits';
+export * from './trajectory';
 
 import type { HistoryRecord } from '../types';
 import { comparePeriods } from './deltas';

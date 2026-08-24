@@ -5,12 +5,16 @@ import {
   dateKey,
   dailyGoalSummary,
   effectiveProgressValue,
+  formatImplementationIntention,
   habitProgressPercent,
   HabitAction,
   isGoalScheduled,
   isHabitComplete,
+  needsRecovery,
+  orderRoutineGoals,
   trackingMode,
 } from '../habits/habitDomain';
+import RoutineRunner from '../components/RoutineRunner';
 import { HabitIcon, IconPicker } from '../components/icons';
 import {
   RoutineGroup,
@@ -142,6 +146,7 @@ function QuestRow({
   onAction,
   onEdit,
   onDelete,
+  inRecovery,
 }: {
   goal: Goal;
   color?: string;
@@ -153,6 +158,7 @@ function QuestRow({
   onAction: (action: HabitAction) => void;
   onEdit: () => void;
   onDelete: () => void;
+  inRecovery?: boolean;
 }) {
   const time = completedTimeToday(goal, today);
   const streak = goal.streak ?? 0;
@@ -169,7 +175,8 @@ function QuestRow({
   const reminders = (goal.reminderTimes?.length ?? 0) > 0
     ? `remind ${goal.reminderFrequency}: ${goal.reminderTimes?.join(', ')}`
     : '';
-  const details = [comment, goal.note, reminders].filter(Boolean).join(' · ');
+  const intention = formatImplementationIntention(goal);
+  const details = [comment, intention, goal.note, reminders].filter(Boolean).join(' · ');
 
   return (
     <div className={`term-quest-row is-dense${grouped ? ' is-grouped' : ''}`}>
@@ -226,9 +233,12 @@ function QuestRow({
       {mode !== 'checkbox' && mode !== 'health' && (
         <span className="term-mini-progress" aria-label={`${percent}% complete`}><i style={{ width: `${percent}%` }} /></span>
       )}
+      {!complete && mode !== 'health' && (
+        <button type="button" className="term-token" onClick={() => onAction({ type: 'two-minute' })} title="Log starter version">[2-min]</button>
+      )}
 
       <span className="term-row-inline" title={details}>
-        {`// ${mode === 'health' ? `${comment} · native sync unavailable on web` : details}`}
+        {`// ${mode === 'health' ? `${comment} · native sync unavailable on web` : details}${inRecovery ? ' · recovery day' : ''}`}
       </span>
 
       <span className="term-habit-meta">
@@ -255,6 +265,7 @@ function RoutineBlock({
   onEdit,
   onDelete,
   renderPanel,
+  goalDailyProgress,
 }: {
   group: DisplayRoutineGroup;
   today: string;
@@ -265,6 +276,7 @@ function RoutineBlock({
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
   renderPanel: (goalId: string) => ReactNode;
+  goalDailyProgress: GoalDailyProgress[];
 }) {
   const [open, setOpen] = useState(true);
 
@@ -295,6 +307,7 @@ function RoutineBlock({
                 onAction={action => onHabitAction(goal.id, action)}
                 onEdit={() => onEdit(goal)}
                 onDelete={() => onDelete(goal)}
+                inRecovery={needsRecovery(goal, goalDailyProgress, today)}
               />
               {renderPanel(goal.id)}
             </Fragment>
@@ -308,6 +321,8 @@ function HabitDraftPanel({
   draft,
   skills,
   routines,
+  goals,
+  identityStatements,
   onChange,
   onSubmit,
   onCancel,
@@ -315,6 +330,8 @@ function HabitDraftPanel({
   draft: Goal;
   skills: SkillOption[];
   routines: Routine[];
+  goals: Goal[];
+  identityStatements?: string[];
   onChange: (draft: Goal) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
@@ -324,6 +341,24 @@ function HabitDraftPanel({
       <form className="term-form" onSubmit={onSubmit}>
         <label>name<input autoFocus className="term-input" value={draft.title} onChange={event => onChange({ ...draft, title: event.target.value })} /></label>
         <label>note<input className="term-input" value={draft.note ?? ''} onChange={event => onChange({ ...draft, note: event.target.value })} placeholder="why or how to do it" /></label>
+        <label>cue location<input className="term-input" value={draft.cueLocation ?? ''} onChange={event => onChange({ ...draft, cueLocation: event.target.value })} placeholder="where you do it" /></label>
+        {formatImplementationIntention(draft) && (
+          <p className="term-comment">{`// ${formatImplementationIntention(draft)}`}</p>
+        )}
+        <label>identity vote
+          <TerminalSelect
+            ariaLabel="Identity statement"
+            value={draft.identityStatementIndex == null ? '' : String(draft.identityStatementIndex)}
+            onChange={value => onChange({ ...draft, identityStatementIndex: value === '' ? undefined : Number(value) })}
+            options={[
+              { value: '', label: 'none' },
+              ...(identityStatements ?? []).map((statement, index) => ({
+                value: String(index),
+                label: statement || `statement ${index + 1}`,
+              })),
+            ]}
+          />
+        </label>
         <IconPicker value={draft.icon ?? 'Target'} onChange={icon => onChange({ ...draft, icon })} label="Habit icon" />
         <label>skill
           <TerminalSelect
@@ -352,6 +387,21 @@ function HabitDraftPanel({
             ]}
           />
         </label>
+        {draft.routineId && (
+          <label>stack after
+            <TerminalSelect
+              ariaLabel="Stack after habit"
+              value={draft.stackAfterGoalId ?? ''}
+              onChange={goalId => onChange({ ...draft, stackAfterGoalId: goalId || undefined })}
+              options={[
+                { value: '', label: 'no anchor' },
+                ...goals
+                  .filter(goal => goal.routineId === draft.routineId && goal.id !== draft.id)
+                  .map(goal => ({ value: goal.id, label: goal.title })),
+              ]}
+            />
+          </label>
+        )}
         <fieldset className="term-fieldset">
           <legend>tracking</legend>
           <div className="term-filter-row">
@@ -368,6 +418,7 @@ function HabitDraftPanel({
             <>
               <label>target<input className="term-input" type="number" min="1" value={draft.targetValue ?? 1} onChange={event => onChange({ ...draft, targetValue: Math.max(1, Number(event.target.value)) })} /></label>
               <label>unit<input className="term-input" value={trackingMode(draft) === 'timer' ? 'minutes' : draft.unit ?? ''} disabled={trackingMode(draft) === 'timer'} onChange={event => onChange({ ...draft, unit: event.target.value })} /></label>
+              <label>2-min target<input className="term-input" type="number" min="1" value={draft.twoMinuteTarget ?? ''} onChange={event => onChange({ ...draft, twoMinuteTarget: event.target.value ? Math.max(1, Number(event.target.value)) : undefined })} placeholder="starter" /></label>
             </>
           )}
           {trackingMode(draft) === 'health' && <p className="term-comment">{'// display-only placeholder; excluded from XP and daily goal scoring'}</p>}
@@ -452,6 +503,7 @@ export default function QuestsView({
   const [draft, setDraft] = useState<Goal | null>(null);
   const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
   const [commandOutput, setCommandOutput] = useState('');
+  const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
   const [, setTimerTick] = useState(0);
 
   useEffect(() => {
@@ -480,9 +532,10 @@ export default function QuestsView({
       const custom = [...routines]
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map(routine => {
-          const routineGoals = scheduled
-            .filter(goal => goal.routineId === routine.id)
-            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+          const routineGoals = orderRoutineGoals(
+            scheduled.filter(goal => goal.routineId === routine.id),
+            routine.id,
+          );
           return {
             id: routine.id,
             name: routine.name,
@@ -546,6 +599,8 @@ export default function QuestsView({
       draft={draft}
       skills={skills}
       routines={routines}
+      goals={goals}
+      identityStatements={userStats.identityStatements}
       onChange={setDraft}
       onSubmit={submit}
       onCancel={() => setDraft(null)}
@@ -594,6 +649,9 @@ export default function QuestsView({
         <span className="term-prompt-cmd">{promptCmd}</span>
       </p>
       <p className="term-comment">{meta}</p>
+      {filter === 'today' && goals.some(goal => needsRecovery(goal, goalDailyProgress, today)) && (
+        <p className="term-comment is-nested">{'// never-miss-twice: habits missed yesterday need a log today'}</p>
+      )}
 
       <div className="term-toolbar">
         <div className="term-filter-row">
@@ -644,18 +702,27 @@ export default function QuestsView({
           <p className="term-comment">{'// nothing scheduled. [+ habit] to add one.'}</p>
         ) : (
           groups.map(group => (
-            <RoutineBlock
-              key={group.id}
-              group={group}
-              today={today}
-              skills={skills}
-              progressMap={progressMap}
-              now={now}
-              onHabitAction={onHabitAction}
-              onEdit={beginEdit}
-              onDelete={setDeleteGoal}
-              renderPanel={renderPanel}
-            />
+            <Fragment key={group.id}>
+              {routines.some(routine => routine.id === group.id) && (
+                <div className="term-toolbar">
+                  <button type="button" className="term-token is-action" onClick={() => setRunningRoutineId(group.id)}>
+                    [run routine]
+                  </button>
+                </div>
+              )}
+              <RoutineBlock
+                group={group}
+                today={today}
+                skills={skills}
+                progressMap={progressMap}
+                now={now}
+                onHabitAction={onHabitAction}
+                onEdit={beginEdit}
+                onDelete={setDeleteGoal}
+                renderPanel={renderPanel}
+                goalDailyProgress={goalDailyProgress}
+              />
+            </Fragment>
           ))
         )
       ) : (
@@ -675,6 +742,7 @@ export default function QuestsView({
                   onAction={action => onHabitAction(goal.id, action)}
                   onEdit={() => beginEdit(goal)}
                   onDelete={() => setDeleteGoal(goal)}
+                  inRecovery={needsRecovery(goal, goalDailyProgress, today)}
                 />
                 {renderPanel(goal.id)}
               </Fragment>
@@ -684,6 +752,17 @@ export default function QuestsView({
       )}
 
       {commandOutput && <p className="term-command-output"><b>&gt;</b> {commandOutput}</p>}
+      {runningRoutineId && routines.find(routine => routine.id === runningRoutineId) && (
+        <RoutineRunner
+          routine={routines.find(routine => routine.id === runningRoutineId)!}
+          goals={goals}
+          progress={goalDailyProgress}
+          today={today}
+          onHabitAction={onHabitAction}
+          onClose={() => setRunningRoutineId(null)}
+          theme="terminal"
+        />
+      )}
     </>
   );
 }

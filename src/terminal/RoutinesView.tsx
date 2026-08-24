@@ -1,6 +1,8 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { Goal, Routine, UserStats } from '../types';
+import { Goal, GoalDailyProgress, Routine, UserStats } from '../types';
+import { HabitAction, dateKey, orderRoutineGoals } from '../habits/habitDomain';
 import { HabitIcon, IconPicker } from '../components/icons';
+import RoutineRunner from '../components/RoutineRunner';
 import TerminalCommandPanel from './TerminalCommandPanel';
 import TerminalSelect from './TerminalSelect';
 import { goalCadence } from './utils';
@@ -9,6 +11,8 @@ interface RoutinesViewProps {
   userStats: UserStats;
   routines: Routine[];
   goals: Goal[];
+  goalDailyProgress: GoalDailyProgress[];
+  onHabitAction: (goalId: string, action: HabitAction) => void;
   onSaveRoutine: (routine: Routine) => void;
   onDeleteRoutine: (id: string) => void;
   onMoveRoutine: (id: string, direction: -1 | 1) => void;
@@ -28,6 +32,8 @@ export default function RoutinesView({
   userStats,
   routines,
   goals,
+  goalDailyProgress,
+  onHabitAction,
   onSaveRoutine,
   onDeleteRoutine,
   onMoveRoutine,
@@ -36,6 +42,7 @@ export default function RoutinesView({
   const [draft, setDraft] = useState<Routine | null>(null);
   const [deleting, setDeleting] = useState<Routine | null>(null);
   const [commandOutput, setCommandOutput] = useState('');
+  const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
 
   const sorted = useMemo(() => [...routines].sort((a, b) => a.sortOrder - b.sortOrder), [routines]);
   const routineIds = useMemo(() => new Set(routines.map(routine => routine.id)), [routines]);
@@ -65,13 +72,25 @@ export default function RoutinesView({
     );
   };
 
-  const habitRow = (goal: Goal, color?: string) => (
+  const habitRow = (goal: Goal, routineId: string, color?: string) => (
     <div className="term-quest-row is-dense" key={goal.id}>
       <span className={goal.completed ? 'term-state-on' : 'term-state-off'}>{goal.completed ? '[✓]' : '[ ]'}</span>
       <span className="term-row-name" style={color ? { color } : undefined}>
         <HabitIcon name={goal.icon ?? 'Target'} size={13} aria-hidden /> {goal.title}
       </span>
-      <span className="term-row-inline">{`// ${goal.difficulty ?? 'easy'} · ${goalCadence(goal)}`}</span>
+      <span className="term-row-inline">{`// ${goal.difficulty ?? 'easy'} · ${goalCadence(goal)}${goal.stackAfterGoalId ? ' · stacked' : ''}`}</span>
+      <TerminalSelect
+        className="term-inline-select"
+        ariaLabel={`Stack after for ${goal.title}`}
+        value={goal.stackAfterGoalId ?? ''}
+        onChange={stackId => onSaveGoal({ ...goal, stackAfterGoalId: stackId || undefined })}
+        options={[
+          { value: '', label: 'no stack' },
+          ...goals
+            .filter(item => item.routineId === routineId && item.id !== goal.id)
+            .map(item => ({ value: item.id, label: item.title })),
+        ]}
+      />
       <TerminalSelect
         className="term-inline-select"
         ariaLabel={`Routine for ${goal.title}`}
@@ -121,9 +140,7 @@ export default function RoutinesView({
       {draft && !draft.id && routinePanel(draft)}
 
       {sorted.map((routine, index) => {
-        const members = goals
-          .filter(goal => goal.routineId === routine.id)
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        const members = orderRoutineGoals(goals, routine.id);
         return (
           <section className="term-group" key={routine.id}>
             <div className="term-group-head">
@@ -133,6 +150,7 @@ export default function RoutinesView({
               </span>
               <span className="term-row-actions">
                 <span className="term-group-count">{`[${members.length} habits]`}</span>
+                <button type="button" className="term-token is-action" disabled={members.length === 0} onClick={() => setRunningRoutineId(routine.id)}>[run]</button>
                 <button type="button" className="term-token" disabled={index === 0} onClick={() => onMoveRoutine(routine.id, -1)}>[↑]</button>
                 <button type="button" className="term-token" disabled={index === sorted.length - 1} onClick={() => onMoveRoutine(routine.id, 1)}>[↓]</button>
                 <button type="button" className="term-token" onClick={() => setDraft({ ...routine })}>[edit]</button>
@@ -163,7 +181,7 @@ export default function RoutinesView({
 
             {members.length === 0
               ? <p className="term-comment is-nested">{'// empty. assign habits from the list below.'}</p>
-              : members.map(goal => habitRow(goal, routine.color))}
+              : members.map(goal => habitRow(goal, routine.id, routine.color))}
           </section>
         );
       })}
@@ -175,10 +193,21 @@ export default function RoutinesView({
         </div>
         {unassigned.length === 0
           ? <p className="term-comment is-nested">{'// every habit belongs to a routine'}</p>
-          : unassigned.map(goal => habitRow(goal))}
+          : unassigned.map(goal => habitRow(goal, '', undefined))}
       </section>
 
       {commandOutput && <p className="term-command-output"><b>&gt;</b> {commandOutput}</p>}
+      {runningRoutineId && routines.find(routine => routine.id === runningRoutineId) && (
+        <RoutineRunner
+          routine={routines.find(routine => routine.id === runningRoutineId)!}
+          goals={goals}
+          progress={goalDailyProgress}
+          today={dateKey()}
+          onHabitAction={onHabitAction}
+          onClose={() => setRunningRoutineId(null)}
+          theme="terminal"
+        />
+      )}
     </>
   );
 }

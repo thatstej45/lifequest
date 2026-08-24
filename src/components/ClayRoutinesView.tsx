@@ -1,11 +1,13 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Edit2, Plus, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Edit2, Play, Plus, Trash2, X } from 'lucide-react';
 import { Goal, Routine } from '../types';
+import { orderRoutineGoals } from '../habits/habitDomain';
 import { HabitIcon, IconPicker } from './icons';
 
 interface ClayRoutinesViewProps {
   routines: Routine[];
   goals: Goal[];
+  onRunRoutine?: (routineId: string) => void;
   onSaveRoutine: (routine: Routine) => void;
   onDeleteRoutine: (id: string) => void;
   onMoveRoutine: (id: string, direction: -1 | 1) => void;
@@ -24,6 +26,7 @@ const newRoutine = (sortOrder: number): Routine => ({
 export default function ClayRoutinesView({
   routines,
   goals,
+  onRunRoutine,
   onSaveRoutine,
   onDeleteRoutine,
   onMoveRoutine,
@@ -47,25 +50,38 @@ export default function ClayRoutinesView({
     setDraft(null);
   };
 
-  const assignment = (goal: Goal) => (
-    <select
-      aria-label={`Routine for ${goal.title}`}
-      className="min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-600 outline-none focus:border-blue-400"
-      value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
-      onChange={event => onSaveGoal({ ...goal, routineId: event.target.value || undefined })}
-    >
-      <option value="">No routine</option>
-      {sorted.map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
-    </select>
+  const assignment = (goal: Goal, routineId: string) => (
+    <>
+      <select
+        aria-label={`Stack after for ${goal.title}`}
+        className="min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-600 outline-none focus:border-blue-400"
+        value={goal.stackAfterGoalId ?? ''}
+        onChange={event => onSaveGoal({ ...goal, stackAfterGoalId: event.target.value || undefined })}
+      >
+        <option value="">No stack</option>
+        {goals.filter(item => item.routineId === routineId && item.id !== goal.id).map(item => (
+          <option key={item.id} value={item.id}>{item.title}</option>
+        ))}
+      </select>
+      <select
+        aria-label={`Routine for ${goal.title}`}
+        className="min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-600 outline-none focus:border-blue-400"
+        value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
+        onChange={event => onSaveGoal({ ...goal, routineId: event.target.value || undefined })}
+      >
+        <option value="">No routine</option>
+        {sorted.map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
+      </select>
+    </>
   );
 
-  const habitRow = (goal: Goal, color = '#64748b') => (
+  const habitRow = (goal: Goal, routineId: string, color = '#64748b') => (
     <div key={goal.id} className="flex items-center gap-2 border-t border-slate-100 py-2 first:border-t-0">
       <span className="shrink-0" style={{ color }}>
         <HabitIcon name={goal.icon ?? 'Target'} size={15} />
       </span>
       <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700">{goal.title}</span>
-      {assignment(goal)}
+      {assignment(goal, routineId)}
     </div>
   );
 
@@ -118,9 +134,7 @@ export default function ClayRoutinesView({
       )}
 
       {sorted.map((routine, index) => {
-        const members = goals
-          .filter(goal => goal.routineId === routine.id)
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        const members = orderRoutineGoals(goals, routine.id);
         return (
           <section key={routine.id} className="clay-card overflow-hidden p-4">
             <div className="flex items-center gap-3">
@@ -132,6 +146,11 @@ export default function ClayRoutinesView({
                 <p className="truncate text-[10px] font-medium text-slate-400">{routine.description || `${members.length} habits`}</p>
               </div>
               <div className="flex items-center gap-1">
+                {onRunRoutine && members.length > 0 && (
+                  <button type="button" onClick={() => onRunRoutine(routine.id)} className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1.5 text-[9px] font-black text-white">
+                    <Play size={11} /> Run
+                  </button>
+                )}
                 <button type="button" disabled={index === 0} onClick={() => onMoveRoutine(routine.id, -1)} className="p-1.5 text-slate-400 disabled:opacity-25"><ArrowUp size={14} /></button>
                 <button type="button" disabled={index === sorted.length - 1} onClick={() => onMoveRoutine(routine.id, 1)} className="p-1.5 text-slate-400 disabled:opacity-25"><ArrowDown size={14} /></button>
                 <button type="button" onClick={() => setDraft({ ...routine })} className="clay-edit-btn p-2"><Edit2 size={13} /></button>
@@ -143,7 +162,7 @@ export default function ClayRoutinesView({
               </div>
             </div>
             <div className="mt-3">
-              {members.length ? members.map(goal => habitRow(goal, routine.color)) : (
+              {members.length ? members.map(goal => habitRow(goal, routine.id, routine.color)) : (
                 <p className="border-t border-slate-100 pt-3 text-xs font-medium text-slate-400">Assign habits below.</p>
               )}
             </div>
@@ -156,7 +175,7 @@ export default function ClayRoutinesView({
           <h3 className="text-sm font-black text-slate-700">Unassigned habits</h3>
           <span className="text-[10px] font-black text-slate-400">{unassigned.length}</span>
         </div>
-        {unassigned.length ? unassigned.map(goal => habitRow(goal)) : (
+        {unassigned.length ? unassigned.map(goal => habitRow(goal, '', '#64748b')) : (
           <p className="text-xs font-medium text-slate-400">Every habit belongs to a routine.</p>
         )}
       </section>
