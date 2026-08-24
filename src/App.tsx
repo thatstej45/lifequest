@@ -141,6 +141,8 @@ import { breakResistanceMessage, defaultBreakInversions, isBreakModeHabit } from
 import { buildQuarterlyReview } from './habits/quarterlyReview';
 import { trajectorySnapshot, recoveryRate } from './analytics';
 import { useNotificationPermission } from './hooks/useNotificationPermission';
+import { useAppUpdate } from './hooks/useAppUpdate';
+import { formatVersionLabel } from './liveUpdate';
 import {
   normalizeReminderTime,
   registerNativeNotificationHandlers,
@@ -1906,6 +1908,7 @@ export default function App() {
     backend: notificationBackend,
     requestPermission: requestNotificationPermission,
   } = useNotificationPermission();
+  const { updateState, refresh: refreshAppUpdate } = useAppUpdate();
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
@@ -2915,7 +2918,6 @@ export default function App() {
           playSound('questComplete');
           setNotification({ title: 'Audio test', message: 'Sound is working', xp: 0 });
         }}
-        onRefresh={() => window.location.reload()}
         notification={notification}
       />
     );
@@ -4393,12 +4395,30 @@ export default function App() {
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Data Management</h3>
                     <div className="space-y-2">
                       <button 
-                        onClick={() => window.location.reload()}
-                        className="w-full flex items-center justify-between p-4 bg-blue-600/10 border border-blue-500/20 rounded-2xl hover:bg-blue-600/20 transition-colors group"
+                        onClick={() => void refreshAppUpdate()}
+                        disabled={updateState.busy}
+                        className="w-full flex items-center justify-between p-4 bg-blue-600/10 border border-blue-500/20 rounded-2xl hover:bg-blue-600/20 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <div className="flex items-center gap-3">
-                          <RefreshCw size={18} className="text-blue-400" />
-                          <span className="text-sm font-medium text-blue-400">Refresh & Update App</span>
+                          <RefreshCw size={18} className={`text-blue-400${updateState.busy ? ' animate-spin' : ''}`} />
+                          <div className="text-left">
+                            <span className="text-sm font-medium text-blue-400">
+                              {updateState.busy
+                                ? updateState.phase === 'checking'
+                                  ? 'Checking for updates…'
+                                  : updateState.phase === 'downloading'
+                                    ? `Downloading…${updateState.progress != null ? ` ${Math.round(updateState.progress)}%` : ''}`
+                                    : updateState.phase === 'applying'
+                                      ? 'Applying update…'
+                                      : 'Refresh & Update App'
+                                : 'Refresh & Update App'}
+                            </span>
+                            {updateState.message && (
+                              <p className={`text-xs mt-0.5 ${updateState.phase === 'error' ? 'text-red-300' : 'text-slate-400'}`}>
+                                {updateState.message}
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <ChevronRight size={16} className="text-blue-400" />
                       </button>
@@ -4439,8 +4459,17 @@ export default function App() {
                   </section>
 
                   {/* App Info */}
-                  <div className="pt-4 text-center">
-                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">LifeRPG v1.0.4</p>
+                  <div className="pt-4 text-center space-y-1">
+                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                      LifeRPG {formatVersionLabel(updateState.runningVersion)}
+                    </p>
+                    {updateState.channelVersion &&
+                      updateState.channelVersion !== updateState.runningVersion &&
+                      updateState.phase !== 'error' && (
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
+                        Channel {formatVersionLabel(updateState.channelVersion)} available
+                      </p>
+                    )}
                   </div>
 
                   {/* Save Button */}

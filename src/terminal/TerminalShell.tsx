@@ -58,7 +58,6 @@ interface TerminalShellProps {
   onInstall: () => void;
   canInstall: boolean;
   onTestSound: () => void;
-  onRefresh: () => void;
   notification: { title?: string; message: string; xp: number } | null;
 }
 
@@ -105,7 +104,6 @@ export default function TerminalShell({
   onInstall,
   canInstall,
   onTestSound,
-  onRefresh,
   notification,
 }: TerminalShellProps) {
   const [tab, setTab] = useState<TerminalTab>('quests');
@@ -203,7 +201,6 @@ export default function TerminalShell({
             onInstall={onInstall}
             canInstall={canInstall}
             onTestSound={onTestSound}
-            onRefresh={onRefresh}
             routines={routines}
             goals={goals}
             history={history}

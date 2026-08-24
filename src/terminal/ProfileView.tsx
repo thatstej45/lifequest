@@ -8,6 +8,8 @@ import { BreakModeList } from '../components/BreakModePanel';
 import { trackingMode } from '../habits/habitDomain';
 import { MENTOR_PERSONALITIES, normalizeMentorPersonality } from '../habits/mentorPersonality';
 import type { NotificationBackend, NotificationPermissionState } from '../services/habitReminders';
+import { useAppUpdate } from '../hooks/useAppUpdate';
+import { formatVersionLabel } from '../liveUpdate';
 
 interface ProfileViewProps {
   userStats: UserStats;
@@ -25,7 +27,6 @@ interface ProfileViewProps {
   onInstall: () => void;
   canInstall: boolean;
   onTestSound: () => void;
-  onRefresh: () => void;
   routines: Routine[];
   goals: Goal[];
   history: HistoryRecord[];
@@ -54,7 +55,6 @@ export default function ProfileView({
   onInstall,
   canInstall,
   onTestSound,
-  onRefresh,
   routines,
   goals,
   history,
@@ -68,6 +68,7 @@ export default function ProfileView({
   const [title, setTitle] = useState(userStats.title ?? 'Master of Life Skills');
   const [identityDraft, setIdentityDraft] = useState<[string, string, string]>(['', '', '']);
   const [copied, setCopied] = useState(false);
+  const { updateState, refresh } = useAppUpdate();
 
   useEffect(() => {
     setName(userStats.name ?? 'Player One');
@@ -81,6 +82,28 @@ export default function ProfileView({
 
   const dirty = name !== (userStats.name ?? '') || title !== (userStats.title ?? '') ||
     identityDraft.some((statement, index) => statement !== (userStats.identityStatements?.[index] ?? ''));
+
+  const refreshLabel = updateState.busy
+    ? updateState.phase === 'checking'
+      ? '[checking…]'
+      : updateState.phase === 'downloading'
+        ? '[downloading…]'
+        : updateState.phase === 'applying'
+          ? '[applying…]'
+          : '[refresh/update]'
+    : '[refresh/update]';
+
+  const versionLine = updateState.channelVersion &&
+    updateState.channelVersion !== updateState.runningVersion &&
+    updateState.phase !== 'error'
+    ? `// lifequest ${formatVersionLabel(updateState.runningVersion)} · channel ${formatVersionLabel(updateState.channelVersion)}`
+    : `// lifequest ${formatVersionLabel(updateState.runningVersion)}`;
+
+  const statusLine = updateState.message
+    ? updateState.phase === 'error'
+      ? `// error: ${updateState.message}`
+      : `// ${updateState.message.toLowerCase()}`
+    : null;
 
   return (
     <>
@@ -342,8 +365,13 @@ export default function ProfileView({
         <h2 className="term-section-title is-red">data management</h2>
         <p className="term-comment is-nested">{'// local-first. everything stays on this device'}</p>
         <div className="term-window-row">
-          <button type="button" className="term-token is-action" onClick={onRefresh}>
-            [refresh/update]
+          <button
+            type="button"
+            className="term-token is-action"
+            disabled={updateState.busy}
+            onClick={() => void refresh()}
+          >
+            {refreshLabel}
           </button>
           <button type="button" className="term-token is-action" onClick={onExport}>
             [export]
@@ -356,9 +384,18 @@ export default function ProfileView({
             [reset]
           </button>
         </div>
+        {statusLine && (
+          <p className="term-comment is-nested">
+            {updateState.phase === 'error' ? (
+              <span className="term-stat-value is-red">{statusLine}</span>
+            ) : (
+              statusLine
+            )}
+          </p>
+        )}
       </section>
 
-      <p className="term-comment">{'// lifequest v1.0.4'}</p>
+      <p className="term-comment">{versionLine}</p>
     </>
   );
 }

@@ -1,6 +1,12 @@
-/* Service Worker Version: 1.0.5 */
-const VERSION = '1.0.5';
+/* Service Worker Version: dev */
+const VERSION = 'dev';
 const channel = new BroadcastChannel('lifequest_channel');
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
