@@ -160,6 +160,39 @@ export class LifeQuestDatabase extends Dexie {
         }
       });
     });
+    this.version(10).stores({
+      categories: 'id',
+      userStats: 'id',
+      goals: 'id, skillId, routineId, trackingMode',
+      routines: 'id, sortOrder',
+      goalDailyProgress: 'id, goalId, date, [goalId+date]',
+      categoryConsistencies: 'categoryId',
+      settings: 'id',
+      history: 'date',
+      questHistory: 'id, goalId, skillId, completedAt',
+      financeIncomes: 'id, date, sourceCategory',
+      financeExpenses: 'id, date, category',
+      financeInvestments: 'id, date, type',
+      financeLending: 'id, personName, returnedStatus',
+      financeInsurance: 'id',
+      financeAssets: 'id',
+      financeTransfers: 'id, date',
+      financeCreditCards: 'id'
+    }).upgrade(async transaction => {
+      const goals = await transaction.table('goals').toArray();
+      const byId = new Map(goals.map(goal => [goal.id, goal]));
+      await transaction.table('goals').toCollection().modify(goal => {
+        const anchorId = goal.stackAfterGoalId;
+        if (!anchorId || anchorId === goal.id || !goal.routineId) {
+          if (goal.stackAfterGoalId) delete goal.stackAfterGoalId;
+          return;
+        }
+        const anchor = byId.get(anchorId);
+        if (!anchor || anchor.routineId !== goal.routineId) {
+          delete goal.stackAfterGoalId;
+        }
+      });
+    });
   }
 }
 

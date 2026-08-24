@@ -2096,6 +2096,16 @@ html[data-theme="terminal"] .term-skill-row.is-dense .term-row-actions {
 
 html[data-theme="terminal"] .term-habit-value { color: var(--terminal-fg); }
 html[data-theme="terminal"] .term-group-name.is-muted { color: var(--terminal-muted); }
+html[data-theme="terminal"] .term-stack-hint {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 11px;
+}
+html[data-theme="terminal"] .term-stack-summary {
+  margin: 4px 0 8px 26px;
+  padding-left: 10px;
+  border-left: 1px solid #2a3140;
+}
 html[data-theme="terminal"] .term-token { white-space: nowrap; }
 
 /* A shell-completion menu instead of the OS dropdown widget. */

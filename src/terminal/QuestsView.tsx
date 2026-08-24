@@ -13,6 +13,7 @@ import {
   needsRecovery,
   orderRoutineGoals,
   trackingMode,
+  validStackAnchors,
 } from '../habits/habitDomain';
 import { goldilocksSuggestions } from '../habits/goldilocks';
 import { mentorMessage } from '../habits/mentorCopy';
@@ -411,9 +412,7 @@ function HabitDraftPanel({
               onChange={goalId => onChange({ ...draft, stackAfterGoalId: goalId || undefined })}
               options={[
                 { value: '', label: 'no anchor' },
-                ...goals
-                  .filter(goal => goal.routineId === draft.routineId && goal.id !== draft.id)
-                  .map(goal => ({ value: goal.id, label: goal.title })),
+                ...validStackAnchors(goals, draft.routineId, draft.id).map(goal => ({ value: goal.id, label: goal.title })),
               ]}
             />
           </label>

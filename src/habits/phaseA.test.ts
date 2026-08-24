@@ -1,11 +1,15 @@
 import {
   computeAppliedXpForProgress,
   countsForDailyGoal,
+  formatHabitStackPhrase,
   formatImplementationIntention,
   fullXpFromTwoMinute,
   orderRoutineGoals,
   twoMinuteXpFromFull,
   TWO_MINUTE_XP_RATIO,
+  validStackAnchors,
+  wouldCreateStackCycle,
+  cleanupGoalsAfterDelete,
 } from './habitDomain';
 import type { Goal, GoalDailyProgress } from '../types';
 
@@ -37,6 +41,15 @@ assert(Math.abs(fullXpFromTwoMinute(twoMin) - full) <= 1, 'two-minute xp reversi
 const g1 = goal({ id: 'a', title: 'meditate', routineId: 'r1', sortOrder: 0 });
 const g2 = goal({ id: 'b', title: 'journal', routineId: 'r1', sortOrder: 1, stackAfterGoalId: 'a' });
 assert(orderRoutineGoals([g2, g1], 'r1').map(item => item.id).join(',') === 'a,b', 'routine stack order');
+
+assert(formatHabitStackPhrase(g2, [g1, g2]) === 'After meditate, I will journal.', 'habit stack phrase');
+assert(validStackAnchors([g1, g2], 'r1', 'b').map(item => item.id).join(',') === 'a', 'valid stack anchors');
+assert(validStackAnchors([g1, g2], 'r1', 'a').length === 0, 'cannot anchor to a dependent habit');
+assert(wouldCreateStackCycle([g1, g2], 'a', 'b'), 'stack cycle blocked');
+assert(
+  cleanupGoalsAfterDelete([g1, g2], 'a').find(item => item.id === 'b')?.stackAfterGoalId == null,
+  'dependents cleared when anchor deleted',
+);
 
 const intention = formatImplementationIntention(goal({
   id: 'c',

@@ -1,8 +1,16 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { Goal, GoalDailyProgress, Routine, UserStats } from '../types';
-import { HabitAction, dateKey, orderRoutineGoals } from '../habits/habitDomain';
+import {
+  formatHabitStackPhrase,
+  goalWithRoutineAssignment,
+  goalWithStackAnchor,
+  HabitAction,
+  dateKey,
+  orderRoutineGoals,
+} from '../habits/habitDomain';
 import { HabitIcon, IconPicker } from '../components/icons';
 import RoutineRunner from '../components/RoutineRunner';
+import RoutineStackControls, { RoutineStackPhrase } from '../components/RoutineStackControls';
 import TerminalCommandPanel from './TerminalCommandPanel';
 import TerminalSelect from './TerminalSelect';
 import { goalCadence } from './utils';
@@ -63,8 +71,9 @@ export default function RoutinesView({
     setDraft(null);
   };
 
-  const assign = (goal: Goal, routineId: string) => {
-    onSaveGoal({ ...goal, routineId: routineId || undefined });
+  const assignRoutine = (goal: Goal, routineId: string) => {
+    const next = goalWithRoutineAssignment(goal, routineId || undefined, goals);
+    onSaveGoal(next);
     setCommandOutput(
       routineId
         ? `moved "${goal.title}" to ${routines.find(routine => routine.id === routineId)?.name ?? 'routine'}`
@@ -72,37 +81,63 @@ export default function RoutinesView({
     );
   };
 
-  const habitRow = (goal: Goal, routineId: string, color?: string) => (
-    <div className="term-quest-row is-dense" key={goal.id}>
-      <span className={goal.completed ? 'term-state-on' : 'term-state-off'}>{goal.completed ? '[✓]' : '[ ]'}</span>
-      <span className="term-row-name" style={color ? { color } : undefined}>
-        <HabitIcon name={goal.icon ?? 'Target'} size={13} aria-hidden /> {goal.title}
-      </span>
-      <span className="term-row-inline">{`// ${goal.difficulty ?? 'easy'} · ${goalCadence(goal)}${goal.stackAfterGoalId ? ' · stacked' : ''}`}</span>
-      <TerminalSelect
-        className="term-inline-select"
-        ariaLabel={`Stack after for ${goal.title}`}
-        value={goal.stackAfterGoalId ?? ''}
-        onChange={stackId => onSaveGoal({ ...goal, stackAfterGoalId: stackId || undefined })}
-        options={[
-          { value: '', label: 'no stack' },
-          ...goals
-            .filter(item => item.routineId === routineId && item.id !== goal.id)
-            .map(item => ({ value: item.id, label: item.title })),
-        ]}
-      />
-      <TerminalSelect
-        className="term-inline-select"
-        ariaLabel={`Routine for ${goal.title}`}
-        value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
-        onChange={routineId => assign(goal, routineId)}
-        options={[
-          { value: '', label: 'no routine' },
-          ...sorted.map(routine => ({ value: routine.id, label: routine.name })),
-        ]}
-      />
+  const assignStack = (goal: Goal, anchorId: string | undefined) => {
+    const next = goalWithStackAnchor(goal, anchorId, goals);
+    if (!next) return;
+    onSaveGoal(next);
+    if (anchorId) {
+      const anchor = goals.find(item => item.id === anchorId);
+      setCommandOutput(`stacked "${goal.title}" after "${anchor?.title ?? 'habit'}"`);
+    } else {
+      setCommandOutput(`removed "${goal.title}" from its stack`);
+    }
+  };
+
+  const habitRow = (goal: Goal, routineId: string | undefined, color?: string) => (
+    <div key={goal.id}>
+      <div className="term-quest-row is-dense">
+        <span className={goal.completed ? 'term-state-on' : 'term-state-off'}>{goal.completed ? '[✓]' : '[ ]'}</span>
+        <span className="term-row-name" style={color ? { color } : undefined}>
+          <HabitIcon name={goal.icon ?? 'Target'} size={13} aria-hidden /> {goal.title}
+        </span>
+        <span className="term-row-inline">{`// ${goal.difficulty ?? 'easy'} · ${goalCadence(goal)}${goal.stackAfterGoalId ? ' · stacked' : ''}`}</span>
+        <RoutineStackControls
+          goal={goal}
+          goals={goals}
+          routineId={routineId}
+          theme="terminal"
+          onStackChange={assignStack}
+        />
+        <TerminalSelect
+          className="term-inline-select"
+          ariaLabel={`Routine for ${goal.title}`}
+          value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
+          onChange={nextRoutineId => assignRoutine(goal, nextRoutineId)}
+          options={[
+            { value: '', label: 'no routine' },
+            ...sorted.map(routine => ({ value: routine.id, label: routine.name })),
+          ]}
+        />
+      </div>
+      <RoutineStackPhrase goal={goal} goals={goals} theme="terminal" />
     </div>
   );
+
+  const stackSummary = (routineId: string) => {
+    const chain = orderRoutineGoals(goals, routineId);
+    const phrases = chain
+      .map(goal => formatHabitStackPhrase(goal, goals))
+      .filter((phrase): phrase is string => Boolean(phrase));
+    if (!phrases.length) return null;
+    return (
+      <div className="term-stack-summary">
+        <p className="term-comment">{`// habit stack (${phrases.length})`}</p>
+        {phrases.map(phrase => (
+          <p key={phrase} className="term-comment is-nested">{`// ${phrase}`}</p>
+        ))}
+      </div>
+    );
+  };
 
   const routinePanel = (routine: Routine) => (
     <TerminalCommandPanel command={routine.id ? 'routine --edit' : 'routine --new'} onCancel={() => setDraft(null)}>
@@ -131,7 +166,7 @@ export default function RoutinesView({
       </p>
 
       <div className="term-toolbar">
-        <p className="term-comment">{'// group habits into repeatable parts of your day'}</p>
+        <p className="term-comment">{'// assign habits to a routine, then stack with "stack after"'}</p>
         <button type="button" className="term-token is-action" onClick={() => setDraft(blankRoutine(sorted.length))}>
           [+ routine]
         </button>
@@ -180,8 +215,13 @@ export default function RoutinesView({
             )}
 
             {members.length === 0
-              ? <p className="term-comment is-nested">{'// empty. assign habits from the list below.'}</p>
-              : members.map(goal => habitRow(goal, routine.id, routine.color))}
+              ? <p className="term-comment is-nested">{'// empty. assign habits below, then pick a stack anchor.'}</p>
+              : (
+                <>
+                  {stackSummary(routine.id)}
+                  {members.map(goal => habitRow(goal, routine.id, routine.color))}
+                </>
+              )}
           </section>
         );
       })}
@@ -191,9 +231,10 @@ export default function RoutinesView({
           <span className="term-group-name is-muted">unassigned habits</span>
           <span className="term-group-count">{`[${unassigned.length} habits]`}</span>
         </div>
+        <p className="term-comment is-nested">{'// pick a routine first — stacking unlocks with two habits in the same routine'}</p>
         {unassigned.length === 0
           ? <p className="term-comment is-nested">{'// every habit belongs to a routine'}</p>
-          : unassigned.map(goal => habitRow(goal, '', undefined))}
+          : unassigned.map(goal => habitRow(goal, undefined, undefined))}
       </section>
 
       {commandOutput && <p className="term-command-output"><b>&gt;</b> {commandOutput}</p>}

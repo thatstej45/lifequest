@@ -1,7 +1,13 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Edit2, Play, Plus, Trash2, X } from 'lucide-react';
 import { Goal, Routine } from '../types';
-import { orderRoutineGoals } from '../habits/habitDomain';
+import {
+  formatHabitStackPhrase,
+  goalWithRoutineAssignment,
+  goalWithStackAnchor,
+  orderRoutineGoals,
+} from '../habits/habitDomain';
+import RoutineStackControls, { RoutineStackPhrase } from './RoutineStackControls';
 import { HabitIcon, IconPicker } from './icons';
 
 interface ClayRoutinesViewProps {
@@ -50,48 +56,74 @@ export default function ClayRoutinesView({
     setDraft(null);
   };
 
-  const assignment = (goal: Goal, routineId: string) => (
-    <>
-      <select
-        aria-label={`Stack after for ${goal.title}`}
-        className="min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-600 outline-none focus:border-blue-400"
-        value={goal.stackAfterGoalId ?? ''}
-        onChange={event => onSaveGoal({ ...goal, stackAfterGoalId: event.target.value || undefined })}
-      >
-        <option value="">No stack</option>
-        {goals.filter(item => item.routineId === routineId && item.id !== goal.id).map(item => (
-          <option key={item.id} value={item.id}>{item.title}</option>
-        ))}
-      </select>
+  const assignRoutine = (goal: Goal, routineId: string) => {
+    onSaveGoal(goalWithRoutineAssignment(goal, routineId || undefined, goals));
+  };
+
+  const assignStack = (goal: Goal, anchorId: string | undefined) => {
+    const next = goalWithStackAnchor(goal, anchorId, goals);
+    if (next) onSaveGoal(next);
+  };
+
+  const assignment = (goal: Goal, routineId: string | undefined) => (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+      <RoutineStackControls
+        goal={goal}
+        goals={goals}
+        routineId={routineId}
+        theme="clay"
+        onStackChange={assignStack}
+      />
       <select
         aria-label={`Routine for ${goal.title}`}
         className="min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-600 outline-none focus:border-blue-400"
         value={goal.routineId && routineIds.has(goal.routineId) ? goal.routineId : ''}
-        onChange={event => onSaveGoal({ ...goal, routineId: event.target.value || undefined })}
+        onChange={event => assignRoutine(goal, event.target.value)}
       >
         <option value="">No routine</option>
         {sorted.map(routine => <option key={routine.id} value={routine.id}>{routine.name}</option>)}
       </select>
-    </>
-  );
-
-  const habitRow = (goal: Goal, routineId: string, color = '#64748b') => (
-    <div key={goal.id} className="flex items-center gap-2 border-t border-slate-100 py-2 first:border-t-0">
-      <span className="shrink-0" style={{ color }}>
-        <HabitIcon name={goal.icon ?? 'Target'} size={15} />
-      </span>
-      <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700">{goal.title}</span>
-      {assignment(goal, routineId)}
     </div>
   );
+
+  const habitRow = (goal: Goal, routineId: string | undefined, color = '#64748b') => (
+    <div key={goal.id} className="border-t border-slate-100 py-2 first:border-t-0">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0" style={{ color }}>
+          <HabitIcon name={goal.icon ?? 'Target'} size={15} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700">{goal.title}</span>
+        {assignment(goal, routineId)}
+      </div>
+      <RoutineStackPhrase goal={goal} goals={goals} theme="clay" />
+    </div>
+  );
+
+  const stackSummary = (routineId: string) => {
+    const chain = orderRoutineGoals(goals, routineId);
+    const phrases = chain
+      .map(goal => formatHabitStackPhrase(goal, goals))
+      .filter((phrase): phrase is string => Boolean(phrase));
+    if (!phrases.length) return null;
+    return (
+      <div className="mb-2 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Habit stack</p>
+        <ul className="mt-1 space-y-0.5">
+          {phrases.map(phrase => (
+            <li key={phrase} className="text-[11px] font-medium text-slate-700">{phrase}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black italic tracking-tighter">ROUTINES</h2>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Group habits into parts of your day
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Group habits into parts of your day, then stack them in order
           </p>
         </div>
         <button
@@ -107,7 +139,7 @@ export default function ClayRoutinesView({
         <form onSubmit={saveDraft} className="clay-card space-y-3 p-4">
           <div className="flex items-center justify-between">
             <h3 className="font-black text-slate-700">{draft.id ? 'Edit routine' : 'New routine'}</h3>
-            <button type="button" onClick={() => setDraft(null)} className="text-slate-400"><X size={18} /></button>
+            <button type="button" onClick={() => setDraft(null)} className="text-slate-500"><X size={18} /></button>
           </div>
           <input
             autoFocus
@@ -124,7 +156,7 @@ export default function ClayRoutinesView({
           />
           <IconPicker value={draft.icon} onChange={icon => setDraft({ ...draft, icon })} color={draft.color} label="Routine icon" />
           <div className="flex items-center gap-3">
-            <label className="text-[10px] font-black uppercase text-slate-500">Color</label>
+            <label className="text-[10px] font-black uppercase text-slate-600">Color</label>
             <input type="color" value={draft.color} onChange={event => setDraft({ ...draft, color: event.target.value })} />
             <button type="submit" disabled={!draft.name.trim()} className="ml-auto rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white disabled:opacity-40">
               Save routine
@@ -143,7 +175,7 @@ export default function ClayRoutinesView({
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-black text-slate-800">{routine.name}</h3>
-                <p className="truncate text-[10px] font-medium text-slate-400">{routine.description || `${members.length} habits`}</p>
+                <p className="truncate text-[10px] font-medium text-slate-500">{routine.description || `${members.length} habits`}</p>
               </div>
               <div className="flex items-center gap-1">
                 {onRunRoutine && members.length > 0 && (
@@ -151,8 +183,8 @@ export default function ClayRoutinesView({
                     <Play size={11} /> Run
                   </button>
                 )}
-                <button type="button" disabled={index === 0} onClick={() => onMoveRoutine(routine.id, -1)} className="p-1.5 text-slate-400 disabled:opacity-25"><ArrowUp size={14} /></button>
-                <button type="button" disabled={index === sorted.length - 1} onClick={() => onMoveRoutine(routine.id, 1)} className="p-1.5 text-slate-400 disabled:opacity-25"><ArrowDown size={14} /></button>
+                <button type="button" disabled={index === 0} onClick={() => onMoveRoutine(routine.id, -1)} className="p-1.5 text-slate-500 disabled:opacity-25"><ArrowUp size={14} /></button>
+                <button type="button" disabled={index === sorted.length - 1} onClick={() => onMoveRoutine(routine.id, 1)} className="p-1.5 text-slate-500 disabled:opacity-25"><ArrowDown size={14} /></button>
                 <button type="button" onClick={() => setDraft({ ...routine })} className="clay-edit-btn p-2"><Edit2 size={13} /></button>
                 {deletingId === routine.id ? (
                   <button type="button" onClick={() => { onDeleteRoutine(routine.id); setDeletingId(null); }} className="rounded-lg bg-red-600 px-2 py-1.5 text-[9px] font-black text-white">DELETE</button>
@@ -162,8 +194,15 @@ export default function ClayRoutinesView({
               </div>
             </div>
             <div className="mt-3">
-              {members.length ? members.map(goal => habitRow(goal, routine.id, routine.color)) : (
-                <p className="border-t border-slate-100 pt-3 text-xs font-medium text-slate-400">Assign habits below.</p>
+              {members.length ? (
+                <>
+                  {stackSummary(routine.id)}
+                  {members.map(goal => habitRow(goal, routine.id, routine.color))}
+                </>
+              ) : (
+                <p className="border-t border-slate-100 pt-3 text-xs font-medium text-slate-500">
+                  Assign habits from the list below, then choose which habit each one follows.
+                </p>
               )}
             </div>
           </section>
@@ -173,10 +212,13 @@ export default function ClayRoutinesView({
       <section className="clay-card p-4">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-sm font-black text-slate-700">Unassigned habits</h3>
-          <span className="text-[10px] font-black text-slate-400">{unassigned.length}</span>
+          <span className="text-[10px] font-black text-slate-500">{unassigned.length}</span>
         </div>
-        {unassigned.length ? unassigned.map(goal => habitRow(goal, '', '#64748b')) : (
-          <p className="text-xs font-medium text-slate-400">Every habit belongs to a routine.</p>
+        <p className="mb-2 text-[10px] font-medium text-slate-500">
+          Pick a routine first. Stacking unlocks once two or more habits share that routine.
+        </p>
+        {unassigned.length ? unassigned.map(goal => habitRow(goal, undefined, '#64748b')) : (
+          <p className="text-xs font-medium text-slate-500">Every habit belongs to a routine.</p>
         )}
       </section>
     </div>

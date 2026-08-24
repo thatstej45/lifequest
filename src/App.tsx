@@ -123,6 +123,10 @@ import {
   formatImplementationIntention,
   recoveryGoals,
   twoMinuteXpFromFull,
+  cleanupGoalsAfterDelete,
+  cleanupGoalsAfterRoutineDelete,
+  sanitizeGoalStack,
+  validStackAnchors,
 } from './habits/habitDomain';
 import { goldilocksSuggestions, applyEasierSuggestion, applyHarderSuggestion } from './habits/goldilocks';
 import { mentorMessage } from './habits/mentorCopy';
@@ -2417,7 +2421,7 @@ export default function App() {
   };
 
   const handleDeleteGoal = (goalId: string) => {
-    setGoals(prev => prev.filter(g => g.id !== goalId));
+    setGoals(prev => cleanupGoalsAfterDelete(prev, goalId));
     setGoalDailyProgress(prev => prev.filter(item => item.goalId !== goalId));
     setQuestHistory(prev => {
       const removed = prev.filter(item => item.goalId === goalId);
@@ -2819,13 +2823,13 @@ export default function App() {
           setNotification({ title: 'Skill unlocked', message: skill.name, xp: 0 });
         }}
         onSaveGoal={goal => {
-          const normalizedGoal: Goal = {
+          const normalizedGoal: Goal = sanitizeGoalStack({
             ...goal,
             trackingMode: goal.trackingMode ?? 'checkbox',
             targetValue: goal.targetValue ?? 1,
             unit: goal.unit ?? 'times',
             sortOrder: goal.sortOrder ?? goals.length,
-          };
+          }, goals);
           setGoals(prev => prev.some(item => item.id === goal.id)
             ? prev.map(item => item.id === goal.id ? normalizedGoal : item)
             : [normalizedGoal, ...prev]);
@@ -2844,7 +2848,7 @@ export default function App() {
         }}
         onDeleteRoutine={id => {
           setRoutines(prev => prev.filter(item => item.id !== id));
-          setGoals(prev => prev.map(goal => goal.routineId === id ? { ...goal, routineId: undefined } : goal));
+          setGoals(prev => cleanupGoalsAfterRoutineDelete(prev, id));
         }}
         onMoveRoutine={(id, direction) => {
           setRoutines(prev => {
@@ -3814,7 +3818,7 @@ export default function App() {
                 }}
                 onDeleteRoutine={id => {
                   setRoutines(previous => previous.filter(item => item.id !== id));
-                  setGoals(previous => previous.map(goal => goal.routineId === id ? { ...goal, routineId: undefined } : goal));
+                  setGoals(previous => cleanupGoalsAfterRoutineDelete(previous, id));
                 }}
                 onMoveRoutine={(id, direction) => {
                   setRoutines(previous => {
@@ -3826,7 +3830,9 @@ export default function App() {
                     return ordered.map((item, sortOrder) => ({ ...item, sortOrder }));
                   });
                 }}
-                onSaveGoal={goal => setGoals(previous => previous.map(item => item.id === goal.id ? goal : item))}
+                onSaveGoal={goal => setGoals(previous => previous.map(item => (
+                  item.id === goal.id ? sanitizeGoalStack(goal, previous) : item
+                )))}
               />
               {runningRoutineId && routines.find(item => item.id === runningRoutineId) && (
                 <RoutineRunner
@@ -5183,7 +5189,10 @@ export default function App() {
                     <label className="text-[10px] font-bold uppercase text-gray-500">Stack after</label>
                     <select className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white" value={newQuestStackAfterGoalId} onChange={event => setNewQuestStackAfterGoalId(event.target.value)}>
                       <option value="">No stack anchor</option>
-                      {goals.filter(goal => goal.routineId === newQuestRoutineId && goal.id !== editingQuest?.id).map(goal => (
+                      {(editingQuest?.id
+                        ? validStackAnchors(goals, newQuestRoutineId, editingQuest.id)
+                        : goals.filter(goal => goal.routineId === newQuestRoutineId)
+                      ).map(goal => (
                         <option key={goal.id} value={goal.id}>{goal.title}</option>
                       ))}
                     </select>

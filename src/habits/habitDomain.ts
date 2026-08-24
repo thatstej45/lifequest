@@ -290,6 +290,97 @@ export const orderRoutineGoals = (goals: Goal[], routineId: string): Goal[] => {
   return result;
 };
 
+export const routineGoalMembers = (goals: Goal[], routineId: string) =>
+  goals.filter(goal => goal.routineId === routineId);
+
+/** Atomic Habits phrasing for a stacked habit. */
+export const formatHabitStackPhrase = (goal: Goal, goals: Goal[]): string | null => {
+  const anchorId = goal.stackAfterGoalId;
+  if (!anchorId || anchorId === goal.id) return null;
+  const anchor = goals.find(item => item.id === anchorId);
+  if (!anchor) return null;
+  return `After ${anchor.title}, I will ${goal.title}.`;
+};
+
+/** True if anchoring goalId after anchorId would create a cycle within the routine. */
+export const wouldCreateStackCycle = (
+  members: Goal[],
+  goalId: string,
+  anchorId: string,
+): boolean => {
+  if (!anchorId || anchorId === goalId) return true;
+  const byId = new Map(members.map(goal => [goal.id, goal]));
+  let current: string | undefined = anchorId;
+  const visited = new Set<string>();
+  while (current) {
+    if (current === goalId) return true;
+    if (visited.has(current)) return true;
+    visited.add(current);
+    current = byId.get(current)?.stackAfterGoalId;
+  }
+  return false;
+};
+
+/** Habits in the same routine that can anchor this habit without creating a cycle. */
+export const validStackAnchors = (goals: Goal[], routineId: string, goalId: string): Goal[] => {
+  const members = routineGoalMembers(goals, routineId);
+  return members.filter(
+    anchor => anchor.id !== goalId && !wouldCreateStackCycle(members, goalId, anchor.id),
+  );
+};
+
+export const sanitizeGoalStack = (goal: Goal, goals: Goal[]): Goal => {
+  const anchorId = goal.stackAfterGoalId;
+  if (!goal.routineId || !anchorId || anchorId === goal.id) {
+    return goal.stackAfterGoalId ? { ...goal, stackAfterGoalId: undefined } : goal;
+  }
+  const anchor = goals.find(item => item.id === anchorId);
+  const members = routineGoalMembers(goals, goal.routineId);
+  if (!anchor || anchor.routineId !== goal.routineId || wouldCreateStackCycle(members, goal.id, anchorId)) {
+    return { ...goal, stackAfterGoalId: undefined };
+  }
+  return goal;
+};
+
+export const goalWithRoutineAssignment = (goal: Goal, routineId: string | undefined, goals: Goal[]): Goal => {
+  if (!routineId) {
+    return { ...goal, routineId: undefined, stackAfterGoalId: undefined };
+  }
+  const next = { ...goal, routineId };
+  return sanitizeGoalStack(next, goals.map(item => (item.id === goal.id ? next : item)));
+};
+
+export const goalWithStackAnchor = (
+  goal: Goal,
+  anchorId: string | undefined,
+  goals: Goal[],
+): Goal | null => {
+  if (!goal.routineId) return null;
+  if (!anchorId) return { ...goal, stackAfterGoalId: undefined };
+  if (anchorId === goal.id) return null;
+  const members = routineGoalMembers(goals, goal.routineId);
+  if (!members.some(item => item.id === anchorId)) return null;
+  if (wouldCreateStackCycle(members, goal.id, anchorId)) return null;
+  return { ...goal, stackAfterGoalId: anchorId };
+};
+
+export const cleanupGoalsAfterDelete = (goals: Goal[], deletedGoalId: string): Goal[] =>
+  goals
+    .filter(goal => goal.id !== deletedGoalId)
+    .map(goal => (goal.stackAfterGoalId === deletedGoalId ? { ...goal, stackAfterGoalId: undefined } : goal));
+
+export const cleanupGoalsAfterRoutineDelete = (goals: Goal[], routineId: string): Goal[] =>
+  goals.map(goal => {
+    if (goal.routineId === routineId) {
+      return { ...goal, routineId: undefined, stackAfterGoalId: undefined };
+    }
+    const anchor = goals.find(item => item.id === goal.stackAfterGoalId);
+    if (anchor?.routineId === routineId) {
+      return { ...goal, stackAfterGoalId: undefined };
+    }
+    return goal;
+  });
+
 const addDaysToKey = (key: string, delta: number) => {
   const date = new Date(`${key}T12:00:00`);
   date.setDate(date.getDate() + delta);
