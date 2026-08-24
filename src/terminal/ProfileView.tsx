@@ -1,6 +1,8 @@
 import { ChangeEvent, useEffect, useState } from 'react';
-import { Goal, Routine, UserStats } from '../types';
+import { Goal, Routine, ScorecardRating, UserStats } from '../types';
 import { THEME_OPTIONS, ThemeId } from '../theme';
+import { ScorecardPanel } from '../components/HabitCoachingPanels';
+import { trackingMode } from '../habits/habitDomain';
 
 interface ProfileViewProps {
   userStats: UserStats;
@@ -20,6 +22,8 @@ interface ProfileViewProps {
   routines: Routine[];
   goals: Goal[];
   onUpdateHabitSettings: (settings: Partial<UserStats>) => void;
+  onRateScorecard: (goalId: string, rating: ScorecardRating | undefined) => void;
+  onAddScorecardQuests: (created: Goal[]) => void;
 }
 
 const MENTORS: Array<NonNullable<UserStats['mentorPersonality']>> = [
@@ -46,6 +50,8 @@ export default function ProfileView({
   routines,
   goals,
   onUpdateHabitSettings,
+  onRateScorecard,
+  onAddScorecardQuests,
 }: ProfileViewProps) {
   const [name, setName] = useState(userStats.name ?? 'Player One');
   const [title, setTitle] = useState(userStats.title ?? 'Master of Life Skills');
@@ -139,6 +145,15 @@ export default function ProfileView({
           </div>
         ))}
       </section>
+
+      <ScorecardPanel
+        theme="terminal"
+        goals={goals.filter(goal => trackingMode(goal) !== 'health')}
+        identityStatements={userStats.identityStatements}
+        onRate={onRateScorecard}
+        onConvertMinus={onAddScorecardQuests}
+        onReviewed={() => onUpdateHabitSettings({ scorecardReviewedAt: new Date().toISOString() })}
+      />
 
       <section className="term-section">
         <h2 className="term-section-title is-good">daily goal & shields</h2>

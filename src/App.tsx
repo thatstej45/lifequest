@@ -124,7 +124,13 @@ import {
   recoveryGoals,
   twoMinuteXpFromFull,
 } from './habits/habitDomain';
+import { goldilocksSuggestions, applyEasierSuggestion, applyHarderSuggestion } from './habits/goldilocks';
+import { mentorMessage } from './habits/mentorCopy';
+import { canCompleteNow, consecutiveMissPenaltyDue } from './habits/commitment';
+import { isVagueHabit } from './habits/scorecard';
+import { logSkipAndSave } from './habits/financeHonor';
 import RoutineRunner from './components/RoutineRunner';
+import { GoldilocksBanner, ScorecardPanel } from './components/HabitCoachingPanels';
 import { trajectorySnapshot, recoveryRate } from './analytics';
 
 import { Howl } from 'howler';
@@ -759,6 +765,7 @@ const QuestItem = ({
   categories,
   progress,
   onHabitAction,
+  onSkipAndSave,
 }: { 
   goal: Goal, 
   toggleGoalCompletion: (id: string) => void,
@@ -777,6 +784,7 @@ const QuestItem = ({
   categories: Category[],
   progress?: GoalDailyProgress,
   onHabitAction: (goalId: string, action: HabitAction) => void,
+  onSkipAndSave?: (goal: Goal) => void,
 }) => (
   <motion.div
     key={`quest-log-item-${goal.id}`}
@@ -847,7 +855,18 @@ const QuestItem = ({
           {formatImplementationIntention(goal) && (
             <p className="text-[9px] italic text-blue-400/80">{formatImplementationIntention(goal)}</p>
           )}
+          {goal.bundleReward && (
+            <p className="text-[9px] text-violet-400">After: {goal.bundleReward}</p>
+          )}
+          {goal.earliestCompleteTime && (
+            <p className="text-[9px] text-slate-500">Opens after {goal.earliestCompleteTime}</p>
+          )}
           <ClayHabitControls goal={goal} progress={progress} onAction={action => onHabitAction(goal.id, action)} />
+          {goal.bundleSkipSaveAmount && !countsForDailyGoal(goal, progress) && onSkipAndSave && (
+            <button type="button" className="mt-1 text-[9px] font-bold text-emerald-500" onClick={() => onSkipAndSave(goal)}>
+              Skip & save ₹{goal.bundleSkipSaveAmount} (honor log)
+            </button>
+          )}
         </div>
         
         <div className="flex items-center gap-3 shrink-0 py-1">
@@ -1809,6 +1828,27 @@ export default function App() {
         });
         return updatedGoals;
       });
+
+      let penaltyTotal = 0;
+      goals.forEach(goal => {
+        if (consecutiveMissPenaltyDue(goal, goalDailyProgress, lastLogin)) {
+          penaltyTotal += goal.consecutiveMissPenaltyXp ?? 0;
+        }
+      });
+      if (penaltyTotal > 0 && !paused) {
+        const playerProgress = applyXp(userStats.level, userStats.xp, -penaltyTotal);
+        setUserStats(prev => ({
+          ...prev,
+          xp: playerProgress.xp,
+          level: playerProgress.level,
+          maxXp: playerProgress.maxXp,
+        }));
+        setNotification({
+          title: 'Commitment penalty',
+          message: mentorMessage('missPenalty', userStats.mentorPersonality ?? 'Supportive'),
+          xp: -penaltyTotal,
+        });
+      }
     }
   }, [
     goalDailyProgress,
@@ -1817,9 +1857,12 @@ export default function App() {
     isLoaded,
     userStats.dailyGoalTarget,
     userStats.lastLoginDate,
+    userStats.mentorPersonality,
     userStats.pauseMode,
     userStats.pauseUntil,
     userStats.streakShields,
+    userStats.level,
+    userStats.xp,
   ]);
 
   useEffect(() => {
@@ -1882,6 +1925,10 @@ export default function App() {
   const [newQuestIdentityIndex, setNewQuestIdentityIndex] = useState<number | undefined>(undefined);
   const [newQuestStackAfterGoalId, setNewQuestStackAfterGoalId] = useState('');
   const [newQuestTwoMinuteTarget, setNewQuestTwoMinuteTarget] = useState<number | undefined>(undefined);
+  const [newQuestBundleReward, setNewQuestBundleReward] = useState('');
+  const [newQuestBundleSkipSave, setNewQuestBundleSkipSave] = useState<number | undefined>(undefined);
+  const [newQuestEarliestTime, setNewQuestEarliestTime] = useState('');
+  const [newQuestMissPenaltyXp, setNewQuestMissPenaltyXp] = useState<number | undefined>(undefined);
   const [settingsIdentityStatements, setSettingsIdentityStatements] = useState<string[]>(['', '', '']);
   const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
   const lastReminderRef = useRef<Record<string, string>>({}); // goalId -> HH:mm to avoid duplicate triggers
@@ -1909,6 +1956,10 @@ export default function App() {
     setNewQuestIdentityIndex(editingQuest.identityStatementIndex);
     setNewQuestStackAfterGoalId(editingQuest.stackAfterGoalId ?? '');
     setNewQuestTwoMinuteTarget(editingQuest.twoMinuteTarget);
+    setNewQuestBundleReward(editingQuest.bundleReward ?? '');
+    setNewQuestBundleSkipSave(editingQuest.bundleSkipSaveAmount);
+    setNewQuestEarliestTime(editingQuest.earliestCompleteTime ?? '');
+    setNewQuestMissPenaltyXp(editingQuest.consecutiveMissPenaltyXp);
   }, [editingQuest]);
 
   useEffect(() => {
@@ -1923,6 +1974,10 @@ export default function App() {
     setNewQuestIdentityIndex(undefined);
     setNewQuestStackAfterGoalId('');
     setNewQuestTwoMinuteTarget(undefined);
+    setNewQuestBundleReward('');
+    setNewQuestBundleSkipSave(undefined);
+    setNewQuestEarliestTime('');
+    setNewQuestMissPenaltyXp(undefined);
   }, [editingQuest, isAddingQuest]);
 
   // Request notification permissions
@@ -2174,6 +2229,49 @@ export default function App() {
     () => recoveryGoals(goals, goalDailyProgress),
     [goals, goalDailyProgress],
   );
+  const goldilocks = useMemo(
+    () => goldilocksSuggestions(goals.filter(goal => trackingMode(goal) !== 'health'), goalDailyProgress),
+    [goals, goalDailyProgress],
+  );
+  const mentorPersonality = userStats.mentorPersonality ?? 'Supportive';
+
+  const applyGoldilocks = useCallback((goalId: string, kind: 'easier' | 'harder') => {
+    setGoals(prev => prev.map(goal => {
+      if (goal.id !== goalId) return goal;
+      return kind === 'easier' ? applyEasierSuggestion(goal) : applyHarderSuggestion(goal);
+    }));
+    setNotification({
+      title: 'Goldilocks applied',
+      message: mentorMessage(kind === 'easier' ? 'plateauEasy' : 'plateauHard', mentorPersonality, goals.find(g => g.id === goalId)?.title),
+      xp: 0,
+    });
+  }, [goals, mentorPersonality]);
+
+  const dismissGoldilocks = useCallback((goalId: string) => {
+    setGoals(prev => prev.map(goal => goal.id === goalId
+      ? { ...goal, goldilocksDismissedAt: new Date().toISOString() }
+      : goal));
+  }, []);
+
+  const rateScorecard = useCallback((goalId: string, rating: import('./types').ScorecardRating | undefined) => {
+    setGoals(prev => prev.map(goal => goal.id === goalId ? { ...goal, scorecardRating: rating } : goal));
+  }, []);
+
+  const addScorecardQuests = useCallback((created: Goal[]) => {
+    if (!created.length) return;
+    setGoals(prev => [...created, ...prev]);
+    setNotification({ title: 'Scorecard quests', message: `Added ${created.length} quest${created.length === 1 ? '' : 's'} from minus habits.`, xp: 0 });
+  }, []);
+
+  const handleSkipAndSave = useCallback(async (goal: Goal) => {
+    if (!goal.bundleSkipSaveAmount) return;
+    await logSkipAndSave(goal.bundleSkipSaveAmount, goal.title, goal.id);
+    setNotification({
+      title: 'Skip & save logged',
+      message: `₹${goal.bundleSkipSaveAmount} honor entry added under Finance (savings).`,
+      xp: 0,
+    });
+  }, []);
 
   // Auto-clear notification
   useEffect(() => {
@@ -2441,8 +2539,14 @@ export default function App() {
       syncedProgress.historyEntryId = historyEntry.id;
       syncedProgress.completedAt = historyEntry.completedAt;
       const identityMsg = identityVoteMessage(goal, userStats.identityStatements);
+      const mentorLine = nextProgress.completionMode === 'twoMinute'
+        ? mentorMessage('twoMinute', mentorPersonality, goal.title)
+        : goal.bundleReward
+          ? mentorMessage('bundleUnlocked', mentorPersonality, goal.title)
+          : undefined;
       setNotification({
-        message: identityMsg ? `${goal.title} · ${identityMsg}` : goal.title,
+        title: goal.bundleReward && isFullyComplete ? 'Bundle unlocked' : undefined,
+        message: [goal.title, identityMsg, mentorLine, goal.bundleReward && isFullyComplete ? goal.bundleReward : undefined].filter(Boolean).join(' · '),
         xp: newApplied,
       });
     } else if (!isLogged && wasLogged) {
@@ -2470,7 +2574,7 @@ export default function App() {
     }
 
     return syncedProgress;
-  }, [categories, goalDailyProgress, questHistory, userStats]);
+  }, [categories, goalDailyProgress, mentorPersonality, questHistory, userStats]);
 
   const handleHabitAction = useCallback((goalId: string, action: HabitAction) => {
     const goal = goals.find(item => item.id === goalId);
@@ -2479,9 +2583,19 @@ export default function App() {
     const today = dateKey(now);
     const current = goalDailyProgress.find(item => item.id === `${goalId}:${today}`);
     const next = applyHabitAction(goal, current, action, now);
+    const wouldLog = countsForDailyGoal(goal, next, now) && !countsForDailyGoal(goal, current, now);
+    const gate = canCompleteNow(goal, now);
+    if (wouldLog && !gate.allowed) {
+      setNotification({
+        title: 'Commitment window',
+        message: mentorMessage('commitmentBlocked', mentorPersonality, goal.title),
+        xp: 0,
+      });
+      return;
+    }
     const synced = syncHabitProgress(goal, current, next, now);
     setGoalDailyProgress(prev => [...prev.filter(item => item.id !== synced.id), synced]);
-  }, [goalDailyProgress, goals, syncHabitProgress]);
+  }, [goalDailyProgress, goals, mentorPersonality, syncHabitProgress]);
 
   const toggleGoalCompletion = useCallback((goalId: string) => {
     handleHabitAction(goalId, { type: 'toggle' });
@@ -2752,6 +2866,11 @@ export default function App() {
           });
         }}
         onUpdateHabitSettings={settings => setUserStats(prev => ({ ...prev, ...settings }))}
+        onRateScorecard={rateScorecard}
+        onAddScorecardQuests={addScorecardQuests}
+        onApplyGoldilocks={applyGoldilocks}
+        onDismissGoldilocks={dismissGoldilocks}
+        onSkipAndSave={handleSkipAndSave}
         onNotificationSound={sound => {
           localStorage.setItem('quest_rpg_notif_sound', sound);
           setUserStats(prev => ({ ...prev, notificationSound: sound }));
@@ -3003,9 +3122,16 @@ export default function App() {
             >
               {recoveringHabits.length > 0 && (
                 <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                  <strong>Never miss twice:</strong> {recoveringHabits.length} habit{recoveringHabits.length === 1 ? '' : 's'} missed yesterday — log a 2-min or full version today.
+                  <strong>Never miss twice:</strong> {mentorMessage('recovery', mentorPersonality, recoveringHabits[0]?.title ?? 'a habit')}
+                  {recoveringHabits.length > 1 ? ` (+${recoveringHabits.length - 1} more)` : ''}
                 </div>
               )}
+              <GoldilocksBanner
+                suggestions={goldilocks.slice(0, 2)}
+                mentorLine={goldilocks[0] ? mentorMessage(goldilocks[0].kind === 'easier' ? 'plateauEasy' : 'plateauHard', mentorPersonality, goldilocks[0].title) : undefined}
+                onApply={applyGoldilocks}
+                onDismiss={dismissGoldilocks}
+              />
               {/* Daily Check-in Card */}
               <DailyCheckIn 
                 userStats={userStats}
@@ -3418,6 +3544,7 @@ export default function App() {
                                   categories={categories}
                                   progress={goalDailyProgress.find(item => item.goalId === goal.id && item.date === dateKey())}
                                   onHabitAction={handleHabitAction}
+                                  onSkipAndSave={handleSkipAndSave}
                                 />
                               ))}
                             </motion.div>
@@ -3469,6 +3596,7 @@ export default function App() {
                                   categories={categories}
                                   progress={goalDailyProgress.find(item => item.goalId === goal.id && item.date === dateKey())}
                                   onHabitAction={handleHabitAction}
+                                  onSkipAndSave={handleSkipAndSave}
                                 />
                               ))}
                             </motion.div>
@@ -3520,6 +3648,7 @@ export default function App() {
                                   categories={categories}
                                   progress={goalDailyProgress.find(item => item.goalId === goal.id && item.date === dateKey())}
                                   onHabitAction={handleHabitAction}
+                                  onSkipAndSave={handleSkipAndSave}
                                 />
                               ))}
                             </motion.div>
@@ -3893,6 +4022,14 @@ export default function App() {
                       />
                     ))}
                   </section>
+
+                  <ScorecardPanel
+                    goals={goals.filter(goal => trackingMode(goal) !== 'health')}
+                    identityStatements={userStats.identityStatements}
+                    onRate={rateScorecard}
+                    onConvertMinus={addScorecardQuests}
+                    onReviewed={() => setUserStats(prev => ({ ...prev, scorecardReviewedAt: new Date().toISOString() }))}
+                  />
 
                   <section className="space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Habits & Daily Goal</h3>
@@ -5012,6 +5149,24 @@ export default function App() {
                     </select>
                   </div>
                 )}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-gray-500">Temptation bundle reward</label>
+                  <input className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white" value={newQuestBundleReward} onChange={e => setNewQuestBundleReward(e.target.value)} placeholder="e.g. one episode, coffee break" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500">Skip & save (₹ honor)</label>
+                    <input className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white" type="number" min="0" value={newQuestBundleSkipSave ?? ''} onChange={e => setNewQuestBundleSkipSave(e.target.value ? Number(e.target.value) : undefined)} placeholder="optional" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500">Earliest complete</label>
+                    <input className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white" type="time" value={newQuestEarliestTime} onChange={e => setNewQuestEarliestTime(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-gray-500">2-miss XP penalty (opt-in)</label>
+                  <input className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white" type="number" min="0" value={newQuestMissPenaltyXp ?? ''} onChange={e => setNewQuestMissPenaltyXp(e.target.value ? Number(e.target.value) : undefined)} placeholder="0 = off" />
+                </div>
                 <div className="grid grid-cols-2 gap-3 overflow-visible relative">
                   <div className="space-y-1 relative z-50">
                     <label className="text-[10px] font-bold uppercase text-gray-500">Skill</label>
@@ -5267,6 +5422,10 @@ export default function App() {
                         identityStatementIndex: newQuestIdentityIndex,
                         stackAfterGoalId: newQuestStackAfterGoalId || undefined,
                         twoMinuteTarget: newQuestTwoMinuteTarget,
+                        bundleReward: newQuestBundleReward.trim() || undefined,
+                        bundleSkipSaveAmount: newQuestBundleSkipSave,
+                        earliestCompleteTime: newQuestEarliestTime || undefined,
+                        consecutiveMissPenaltyXp: newQuestMissPenaltyXp,
                       } : g));
                       setNotification({ title: "Success", message: "Quest updated!", xp: 0 });
                     } else {
@@ -5296,6 +5455,10 @@ export default function App() {
                         identityStatementIndex: newQuestIdentityIndex,
                         stackAfterGoalId: newQuestStackAfterGoalId || undefined,
                         twoMinuteTarget: newQuestTwoMinuteTarget,
+                        bundleReward: newQuestBundleReward.trim() || undefined,
+                        bundleSkipSaveAmount: newQuestBundleSkipSave,
+                        earliestCompleteTime: newQuestEarliestTime || undefined,
+                        consecutiveMissPenaltyXp: newQuestMissPenaltyXp,
                       };
                       setGoals(prev => [newGoal, ...prev]);
                       setNotification({ title: "Success", message: "New quest created!", xp: 0 });
@@ -5320,6 +5483,10 @@ export default function App() {
                     setNewQuestIdentityIndex(undefined);
                     setNewQuestStackAfterGoalId('');
                     setNewQuestTwoMinuteTarget(undefined);
+                    setNewQuestBundleReward('');
+                    setNewQuestBundleSkipSave(undefined);
+                    setNewQuestEarliestTime('');
+                    setNewQuestMissPenaltyXp(undefined);
                   }}
                   className={cn(
                     "w-full py-4 font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 mt-4",

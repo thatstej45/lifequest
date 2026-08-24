@@ -1,5 +1,5 @@
 import { ChangeEvent, useState } from 'react';
-import { Category, CompletedQuest, Goal, GoalDailyProgress, HistoryRecord, Routine, UserStats } from '../types';
+import { Category, CompletedQuest, Goal, GoalDailyProgress, HistoryRecord, Routine, ScorecardRating, UserStats } from '../types';
 import { HabitAction } from '../habits/habitDomain';
 import { ThemeId } from '../theme';
 import StatsView from './StatsView';
@@ -45,6 +45,11 @@ interface TerminalShellProps {
   onDeleteRoutine: (id: string) => void;
   onMoveRoutine: (id: string, direction: -1 | 1) => void;
   onUpdateHabitSettings: (settings: Partial<UserStats>) => void;
+  onRateScorecard: (goalId: string, rating: ScorecardRating | undefined) => void;
+  onAddScorecardQuests: (created: Goal[]) => void;
+  onApplyGoldilocks: (goalId: string, kind: 'easier' | 'harder') => void;
+  onDismissGoldilocks: (goalId: string) => void;
+  onSkipAndSave: (goal: Goal) => void | Promise<void>;
   onNotificationSound: (sound: string) => void;
   onEnableNotifications: () => void;
   onInstall: () => void;
@@ -85,6 +90,11 @@ export default function TerminalShell({
   onDeleteRoutine,
   onMoveRoutine,
   onUpdateHabitSettings,
+  onRateScorecard,
+  onAddScorecardQuests,
+  onApplyGoldilocks,
+  onDismissGoldilocks,
+  onSkipAndSave,
   onNotificationSound,
   onEnableNotifications,
   onInstall,
@@ -149,6 +159,9 @@ export default function TerminalShell({
             onHabitAction={onHabitAction}
             onSaveGoal={onSaveGoal}
             onDeleteGoal={onDeleteGoal}
+            onApplyGoldilocks={onApplyGoldilocks}
+            onDismissGoldilocks={onDismissGoldilocks}
+            onSkipAndSave={onSkipAndSave}
           />
         ) : tab === 'routines' ? (
           <RoutinesView
@@ -183,6 +196,8 @@ export default function TerminalShell({
             routines={routines}
             goals={goals}
             onUpdateHabitSettings={onUpdateHabitSettings}
+            onRateScorecard={onRateScorecard}
+            onAddScorecardQuests={onAddScorecardQuests}
           />
         )}
       </main>

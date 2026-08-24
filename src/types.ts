@@ -3,6 +3,9 @@ export type QuestDifficulty = 'trivial' | 'easy' | 'medium' | 'hard';
 export type TrackingMode = 'checkbox' | 'counter' | 'numeric' | 'timer' | 'health';
 export type PauseMode = 'none' | 'vacation' | 'sick';
 export type AppearanceDensity = 'compact' | 'cozy' | 'relaxed';
+export type ScorecardRating = '+' | '-' | '=';
+export type HabitKind = 'build' | 'break' | 'replace';
+export type MentorPersonality = 'Supportive' | 'Sarcastic' | 'Stoic';
 
 export interface Perk {
   level: number;
@@ -48,7 +51,7 @@ export interface UserStats {
   skillPoints: number;
   name?: string;
   title?: string;
-  mentorPersonality?: 'Supportive' | 'Sarcastic' | 'Stoic';
+  mentorPersonality?: MentorPersonality;
   notificationSound?: string;
   progressionVersion?: number;
   habitDataVersion?: number;
@@ -65,6 +68,8 @@ export interface UserStats {
   recoveryDaysCompleted?: number;
   /** Days where at least one habit entered recovery (missed prior scheduled day). */
   recoveryAttempts?: number;
+  /** ISO timestamp of last habits scorecard review. */
+  scorecardReviewedAt?: string;
 }
 
 export interface Goal {
@@ -99,6 +104,21 @@ export interface Goal {
   stackAfterGoalId?: string;
   /** Starter/minimum target for two-minute mode (counter/numeric/timer). */
   twoMinuteTarget?: number;
+  /** Scorecard alignment: vote for (+), against (−), or neutral (=) identity. */
+  scorecardRating?: ScorecardRating;
+  habitKind?: HabitKind;
+  /** For replace habits: the build habit that replaces this behavior. */
+  replacementGoalId?: string;
+  /** Temptation bundle reward after completing this needed habit. */
+  bundleReward?: string;
+  /** Honor-system amount logged to finance when skipping instead of earning the bundle. */
+  bundleSkipSaveAmount?: number;
+  /** Cannot mark complete before this local time (HH:mm). */
+  earliestCompleteTime?: string;
+  /** Opt-in XP loss when two scheduled days are missed in a row. */
+  consecutiveMissPenaltyXp?: number;
+  /** ISO date when user last dismissed a Goldilocks suggestion for this habit. */
+  goldilocksDismissedAt?: string;
 }
 
 export interface Routine {

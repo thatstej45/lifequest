@@ -14,7 +14,11 @@ import {
   orderRoutineGoals,
   trackingMode,
 } from '../habits/habitDomain';
+import { goldilocksSuggestions } from '../habits/goldilocks';
+import { mentorMessage } from '../habits/mentorCopy';
+import { isVagueHabit, SCORECARD_RATINGS } from '../habits/scorecard';
 import RoutineRunner from '../components/RoutineRunner';
+import { GoldilocksBanner } from '../components/HabitCoachingPanels';
 import { HabitIcon, IconPicker } from '../components/icons';
 import {
   RoutineGroup,
@@ -43,6 +47,9 @@ interface QuestsViewProps {
   onHabitAction: (id: string, action: HabitAction) => void;
   onSaveGoal: (goal: Goal) => void;
   onDeleteGoal: (id: string) => void;
+  onApplyGoldilocks: (goalId: string, kind: 'easier' | 'harder') => void;
+  onDismissGoldilocks: (goalId: string) => void;
+  onSkipAndSave: (goal: Goal) => void | Promise<void>;
 }
 
 type SkillOption = Skill & { category: Category };
@@ -147,6 +154,7 @@ function QuestRow({
   onEdit,
   onDelete,
   inRecovery,
+  onSkipAndSave,
 }: {
   goal: Goal;
   color?: string;
@@ -159,6 +167,7 @@ function QuestRow({
   onEdit: () => void;
   onDelete: () => void;
   inRecovery?: boolean;
+  onSkipAndSave?: (goal: Goal) => void | Promise<void>;
 }) {
   const time = completedTimeToday(goal, today);
   const streak = goal.streak ?? 0;
@@ -176,7 +185,8 @@ function QuestRow({
     ? `remind ${goal.reminderFrequency}: ${goal.reminderTimes?.join(', ')}`
     : '';
   const intention = formatImplementationIntention(goal);
-  const details = [comment, intention, goal.note, reminders].filter(Boolean).join(' · ');
+  const details = [comment, intention, goal.note, goal.bundleReward ? `reward: ${goal.bundleReward}` : '', reminders].filter(Boolean).join(' · ');
+  const vague = isVagueHabit(goal);
 
   return (
     <div className={`term-quest-row is-dense${grouped ? ' is-grouped' : ''}`}>
@@ -238,8 +248,11 @@ function QuestRow({
       )}
 
       <span className="term-row-inline" title={details}>
-        {`// ${mode === 'health' ? `${comment} · native sync unavailable on web` : details}${inRecovery ? ' · recovery day' : ''}`}
+        {`// ${mode === 'health' ? `${comment} · native sync unavailable on web` : details}${inRecovery ? ' · recovery day' : ''}${vague ? ' · vague cue' : ''}`}
       </span>
+      {goal.bundleSkipSaveAmount && !complete && !progress?.twoMinuteLogged && onSkipAndSave && (
+        <button type="button" className="term-token" onClick={() => onSkipAndSave(goal)}>[skip-save ₹{goal.bundleSkipSaveAmount}]</button>
+      )}
 
       <span className="term-habit-meta">
         {streak > 0 && <span className="term-streak">{`\u25B2${streak}`}</span>}
@@ -266,6 +279,7 @@ function RoutineBlock({
   onDelete,
   renderPanel,
   goalDailyProgress,
+  onSkipAndSave,
 }: {
   group: DisplayRoutineGroup;
   today: string;
@@ -277,6 +291,7 @@ function RoutineBlock({
   onDelete: (goal: Goal) => void;
   renderPanel: (goalId: string) => ReactNode;
   goalDailyProgress: GoalDailyProgress[];
+  onSkipAndSave?: (goal: Goal) => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -308,6 +323,7 @@ function RoutineBlock({
                 onEdit={() => onEdit(goal)}
                 onDelete={() => onDelete(goal)}
                 inRecovery={needsRecovery(goal, goalDailyProgress, today)}
+                onSkipAndSave={onSkipAndSave}
               />
               {renderPanel(goal.id)}
             </Fragment>
@@ -403,6 +419,18 @@ function HabitDraftPanel({
           </label>
         )}
         <fieldset className="term-fieldset">
+          <legend>scorecard</legend>
+          <div className="term-filter-row">
+            {SCORECARD_RATINGS.map(rating => (
+              <button type="button" key={rating} className={`term-token${draft.scorecardRating === rating ? ' is-active' : ''}`} onClick={() => onChange({ ...draft, scorecardRating: draft.scorecardRating === rating ? undefined : rating })}>{`[${rating}]`}</button>
+            ))}
+          </div>
+        </fieldset>
+        <label>bundle reward<input className="term-input" value={draft.bundleReward ?? ''} onChange={event => onChange({ ...draft, bundleReward: event.target.value })} placeholder="wanted reward after completion" /></label>
+        <label>skip & save ₹<input className="term-input" type="number" min="0" value={draft.bundleSkipSaveAmount ?? ''} onChange={event => onChange({ ...draft, bundleSkipSaveAmount: event.target.value ? Number(event.target.value) : undefined })} /></label>
+        <label>earliest complete<input className="term-input" type="time" value={draft.earliestCompleteTime ?? ''} onChange={event => onChange({ ...draft, earliestCompleteTime: event.target.value || undefined })} /></label>
+        <label>2-miss penalty xp<input className="term-input" type="number" min="0" value={draft.consecutiveMissPenaltyXp ?? ''} onChange={event => onChange({ ...draft, consecutiveMissPenaltyXp: event.target.value ? Number(event.target.value) : undefined })} /></label>
+        <fieldset className="term-fieldset">
           <legend>tracking</legend>
           <div className="term-filter-row">
             {(['checkbox', 'counter', 'numeric', 'timer', 'health'] as TrackingMode[]).map(mode => (
@@ -497,6 +525,9 @@ export default function QuestsView({
   onHabitAction,
   onSaveGoal,
   onDeleteGoal,
+  onApplyGoldilocks,
+  onDismissGoldilocks,
+  onSkipAndSave,
 }: QuestsViewProps) {
   const [filter, setFilter] = useState<QuestFilter>('today');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -555,6 +586,11 @@ export default function QuestsView({
   );
 
   const dailySummary = dailyGoalSummary(goals, goalDailyProgress, userStats.dailyGoalTarget ?? 60, now);
+  const goldilocks = useMemo(
+    () => goldilocksSuggestions(goals.filter(goal => trackingMode(goal) !== 'health'), goalDailyProgress, now),
+    [goals, goalDailyProgress, now],
+  );
+  const mentorPersonality = userStats.mentorPersonality ?? 'Supportive';
 
   const visible = goals.filter(goal => {
     if (filter === 'done') return goal.completed;
@@ -650,8 +686,15 @@ export default function QuestsView({
       </p>
       <p className="term-comment">{meta}</p>
       {filter === 'today' && goals.some(goal => needsRecovery(goal, goalDailyProgress, today)) && (
-        <p className="term-comment is-nested">{'// never-miss-twice: habits missed yesterday need a log today'}</p>
+        <p className="term-comment is-nested">{`// ${mentorMessage('recovery', mentorPersonality, goals.find(goal => needsRecovery(goal, goalDailyProgress, today))?.title)}`}</p>
       )}
+      <GoldilocksBanner
+        theme="terminal"
+        suggestions={goldilocks.slice(0, 2)}
+        mentorLine={goldilocks[0] ? mentorMessage(goldilocks[0].kind === 'easier' ? 'plateauEasy' : 'plateauHard', mentorPersonality, goldilocks[0].title) : undefined}
+        onApply={onApplyGoldilocks}
+        onDismiss={onDismissGoldilocks}
+      />
 
       <div className="term-toolbar">
         <div className="term-filter-row">
@@ -721,6 +764,7 @@ export default function QuestsView({
                 onDelete={setDeleteGoal}
                 renderPanel={renderPanel}
                 goalDailyProgress={goalDailyProgress}
+                onSkipAndSave={onSkipAndSave}
               />
             </Fragment>
           ))
@@ -743,6 +787,7 @@ export default function QuestsView({
                   onEdit={() => beginEdit(goal)}
                   onDelete={() => setDeleteGoal(goal)}
                   inRecovery={needsRecovery(goal, goalDailyProgress, today)}
+                  onSkipAndSave={onSkipAndSave}
                 />
                 {renderPanel(goal.id)}
               </Fragment>

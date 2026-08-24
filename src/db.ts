@@ -4,6 +4,7 @@ import {
   FinanceIncome, FinanceExpense, FinanceInvestment, FinanceLending, FinanceInsurance,
   FinanceAsset, FinanceTransfer, FinanceCreditCard
 } from './types';
+import { HABIT_DATA_VERSION } from './habits/habitDomain';
 
 export class LifeQuestDatabase extends Dexie {
   categories!: Table<Category>;
@@ -106,6 +107,32 @@ export class LifeQuestDatabase extends Dexie {
         if (goal.identityStatementIndex != null && goal.identityStatementIndex > 2) {
           delete goal.identityStatementIndex;
         }
+      });
+    });
+    this.version(8).stores({
+      categories: 'id',
+      userStats: 'id',
+      goals: 'id, skillId, routineId, trackingMode',
+      routines: 'id, sortOrder',
+      goalDailyProgress: 'id, goalId, date, [goalId+date]',
+      categoryConsistencies: 'categoryId',
+      settings: 'id',
+      history: 'date',
+      questHistory: 'id, goalId, skillId, completedAt',
+      financeIncomes: 'id, date, sourceCategory',
+      financeExpenses: 'id, date, category',
+      financeInvestments: 'id, date, type',
+      financeLending: 'id, personName, returnedStatus',
+      financeInsurance: 'id',
+      financeAssets: 'id',
+      financeTransfers: 'id, date',
+      financeCreditCards: 'id'
+    }).upgrade(async transaction => {
+      await transaction.table('userStats').toCollection().modify(stats => {
+        stats.habitDataVersion = HABIT_DATA_VERSION;
+      });
+      await transaction.table('goals').toCollection().modify(goal => {
+        goal.habitKind ??= 'build';
       });
     });
   }
