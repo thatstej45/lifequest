@@ -522,6 +522,27 @@ b, strong, th {
   background-color: rgba(245, 158, 11, 0.12) !important;
   color: #b45309 !important;
 }
+.bg-amber-500\/10 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+.text-amber-200,
+.text-amber-300,
+.text-amber-400 {
+  color: #92400e !important;
+}
+.text-amber-700,
+.text-amber-800,
+.text-amber-900,
+.text-amber-950 {
+  color: #78350f !important;
+}
+.text-violet-400 {
+  color: #5b21b6 !important;
+}
+.text-violet-700,
+.text-violet-800 {
+  color: #5b21b6 !important;
+}
 .bg-blue-500\/10 {
   background-color: rgba(59, 130, 246, 0.12) !important;
   color: #1d4ed8 !important;
@@ -903,8 +924,14 @@ html[data-theme="terminal"] .text-blue-600 {
 
 html[data-theme="terminal"] .text-yellow-400,
 html[data-theme="terminal"] .text-yellow-500,
-html[data-theme="terminal"] .text-orange-400 {
+html[data-theme="terminal"] .text-orange-400,
+html[data-theme="terminal"] .text-amber-400 {
   color: var(--terminal-amber) !important;
+}
+
+html[data-theme="terminal"] .text-violet-400,
+html[data-theme="terminal"] .text-violet-700 {
+  color: var(--terminal-purple) !important;
 }
 
 html[data-theme="terminal"] .text-purple-400,

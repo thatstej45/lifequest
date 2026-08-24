@@ -5,7 +5,7 @@ export type PauseMode = 'none' | 'vacation' | 'sick';
 export type AppearanceDensity = 'compact' | 'cozy' | 'relaxed';
 export type ScorecardRating = '+' | '-' | '=';
 export type HabitKind = 'build' | 'break' | 'replace';
-export type MentorPersonality = 'Supportive' | 'Sarcastic' | 'Stoic';
+export type MentorPersonality = 'Supportive' | 'Snarky' | 'Stoic';
 
 export interface Perk {
   level: number;

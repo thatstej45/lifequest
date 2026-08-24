@@ -16,6 +16,9 @@ const config: CapacitorConfig = {
       statsUrl: '',
       channelUrl: '',
     },
+    LocalNotifications: {
+      iconColor: '#2563eb',
+    },
   },
 };
 

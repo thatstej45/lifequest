@@ -135,6 +135,31 @@ export class LifeQuestDatabase extends Dexie {
         goal.habitKind ??= 'build';
       });
     });
+    this.version(9).stores({
+      categories: 'id',
+      userStats: 'id',
+      goals: 'id, skillId, routineId, trackingMode',
+      routines: 'id, sortOrder',
+      goalDailyProgress: 'id, goalId, date, [goalId+date]',
+      categoryConsistencies: 'categoryId',
+      settings: 'id',
+      history: 'date',
+      questHistory: 'id, goalId, skillId, completedAt',
+      financeIncomes: 'id, date, sourceCategory',
+      financeExpenses: 'id, date, category',
+      financeInvestments: 'id, date, type',
+      financeLending: 'id, personName, returnedStatus',
+      financeInsurance: 'id',
+      financeAssets: 'id',
+      financeTransfers: 'id, date',
+      financeCreditCards: 'id'
+    }).upgrade(async transaction => {
+      await transaction.table('userStats').toCollection().modify(stats => {
+        if (stats.mentorPersonality === 'Sarcastic') {
+          stats.mentorPersonality = 'Snarky';
+        }
+      });
+    });
   }
 }
 

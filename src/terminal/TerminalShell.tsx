@@ -9,6 +9,7 @@ import QuestsView from './QuestsView';
 import RoutinesView from './RoutinesView';
 import FinanceView from './FinanceView';
 import { useSwipeTabs } from '../hooks/useSwipeTabs';
+import type { NotificationBackend, NotificationPermissionState } from '../services/habitReminders';
 
 type TerminalTab = 'quests' | 'routines' | 'skills' | 'stats' | 'finance' | 'settings';
 
@@ -52,6 +53,8 @@ interface TerminalShellProps {
   onSkipAndSave: (goal: Goal) => void | Promise<void>;
   onNotificationSound: (sound: string) => void;
   onEnableNotifications: () => void;
+  notificationPermission: NotificationPermissionState;
+  notificationBackend: NotificationBackend;
   onInstall: () => void;
   canInstall: boolean;
   onTestSound: () => void;
@@ -97,6 +100,8 @@ export default function TerminalShell({
   onSkipAndSave,
   onNotificationSound,
   onEnableNotifications,
+  notificationPermission,
+  notificationBackend,
   onInstall,
   canInstall,
   onTestSound,
@@ -189,6 +194,8 @@ export default function TerminalShell({
             onReset={onReset}
             onNotificationSound={onNotificationSound}
             onEnableNotifications={onEnableNotifications}
+            notificationPermission={notificationPermission}
+            notificationBackend={notificationBackend}
             onInstall={onInstall}
             canInstall={canInstall}
             onTestSound={onTestSound}

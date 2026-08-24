@@ -82,7 +82,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import {
   Category, UserStats, Goal, Skill, CategoryId, CategoryConsistency, HistoryRecord,
-  CompletedQuest, QuestDifficulty, Routine, GoalDailyProgress,
+  CompletedQuest, QuestDifficulty, Routine, GoalDailyProgress, MentorPersonality,
 } from './types';
 import { INITIAL_CATEGORIES } from './constants';
 import DynamicBackground from './components/layout/DynamicBackground';
@@ -131,6 +131,15 @@ import { logSkipAndSave } from './habits/financeHonor';
 import RoutineRunner from './components/RoutineRunner';
 import { GoldilocksBanner, ScorecardPanel } from './components/HabitCoachingPanels';
 import { trajectorySnapshot, recoveryRate } from './analytics';
+import { useNotificationPermission } from './hooks/useNotificationPermission';
+import {
+  normalizeReminderTime,
+  registerNativeNotificationHandlers,
+  shouldRemindGoal,
+  showWebReminder,
+  syncNativeHabitReminders,
+} from './services/habitReminders';
+import { MENTOR_PERSONALITIES, normalizeMentorPersonality } from './habits/mentorPersonality';
 
 import { Howl } from 'howler';
 
@@ -700,7 +709,7 @@ const ClayHabitControls = ({
     return (
       <button
         type="button"
-        className="mt-1 rounded-lg border border-amber-300/40 bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-400"
+        className="mt-1 rounded-lg border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-900"
         onClick={() => onAction({ type: 'two-minute' })}
       >
         Log 2-min version
@@ -819,7 +828,7 @@ const QuestItem = ({
                 One-Time
               </span>
             )}
-            <span className="text-[8px] font-black bg-violet-500/20 text-violet-400 px-1.5 py-0.5 rounded uppercase shrink-0">
+            <span className="text-[8px] font-black bg-violet-500/20 text-violet-800 px-1.5 py-0.5 rounded uppercase shrink-0">
               {goal.difficulty ?? 'easy'}
             </span>
             {goal.reminderTimes && goal.reminderTimes.length > 0 && goal.reminderTimes.some(t => formatTimeForDisplay(t) !== 'Invalid Time') && (
@@ -855,7 +864,7 @@ const QuestItem = ({
             <p className="text-[9px] italic text-blue-400/80">{formatImplementationIntention(goal)}</p>
           )}
           {goal.bundleReward && (
-            <p className="text-[9px] text-violet-400">After: {goal.bundleReward}</p>
+            <p className="text-[9px] text-violet-700">After: {goal.bundleReward}</p>
           )}
           {goal.earliestCompleteTime && (
             <p className="text-[9px] text-slate-500">Opens after {goal.earliestCompleteTime}</p>
@@ -1578,7 +1587,7 @@ export default function App() {
     skillPoints: 0,
     name: 'Player One',
     title: 'Master of Life Skills',
-    mentorPersonality: 'Sarcastic',
+    mentorPersonality: 'Snarky',
     progressionVersion: PROGRESSION_VERSION,
     habitDataVersion: HABIT_DATA_VERSION,
     dailyGoalTarget: 60,
@@ -1883,6 +1892,11 @@ export default function App() {
     [categories, selectedCategoryId]
   );
   const [notification, setNotification] = useState<{ title?: string, message: string, xp: number } | null>(null);
+  const {
+    permission: notificationPermission,
+    backend: notificationBackend,
+    requestPermission: requestNotificationPermission,
+  } = useNotificationPermission();
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isInstallGuideOpen, setIsInstallGuideOpen] = useState(false);
@@ -1890,7 +1904,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsName, setSettingsName] = useState('');
   const [settingsTitle, setSettingsTitle] = useState('');
-  const [settingsPersonality, setSettingsPersonality] = useState<'Supportive' | 'Sarcastic' | 'Stoic'>('Sarcastic');
+  const [settingsPersonality, setSettingsPersonality] = useState<MentorPersonality>('Snarky');
   const [settingsTheme, setSettingsTheme] = useState<ThemeId>(theme);
   const [loadingQuestSkillId, setLoadingQuestSkillId] = useState<string | null>(null);
   const [selectedQuestForGuide, setSelectedQuestForGuide] = useState<Goal | null>(null);
@@ -1979,12 +1993,7 @@ export default function App() {
     setNewQuestMissPenaltyXp(undefined);
   }, [editingQuest, isAddingQuest]);
 
-  // Request notification permissions
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
+  // Notification permission is requested from Settings / Profile, not on mount (avoids silent denial).
 
   useEffect(() => {
     applyTheme(theme);
@@ -2117,7 +2126,7 @@ export default function App() {
     if (isSettingsOpen) {
       setSettingsName(userStats.name || 'Player One');
       setSettingsTitle(userStats.title || 'Master of Life Skills');
-      setSettingsPersonality(userStats.mentorPersonality || 'Sarcastic');
+      setSettingsPersonality(normalizeMentorPersonality(userStats.mentorPersonality));
       setSettingsTheme(theme);
       setSettingsIdentityStatements([
         userStats.identityStatements?.[0] ?? '',
@@ -2232,7 +2241,7 @@ export default function App() {
     () => goldilocksSuggestions(goals.filter(goal => trackingMode(goal) !== 'health'), goalDailyProgress),
     [goals, goalDailyProgress],
   );
-  const mentorPersonality = userStats.mentorPersonality ?? 'Supportive';
+  const mentorPersonality = normalizeMentorPersonality(userStats.mentorPersonality);
 
   const applyGoldilocks = useCallback((goalId: string, kind: 'easier' | 'harder') => {
     setGoals(prev => prev.map(goal => {
@@ -2657,86 +2666,69 @@ export default function App() {
       checkDayChange();
       const now = new Date();
       const currentHHmm = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      
-      // Avoid re-checking the same minute multiple times for the same goals 
+
       if (currentHHmm === lastCheckedMinute.current) return;
       lastCheckedMinute.current = currentHHmm;
-      const today = now.getDay();
-      
-      // Get service worker registration for better background handling
-      let swRegistration: ServiceWorkerRegistration | null = null;
-      if ('serviceWorker' in navigator) {
-        swRegistration = await navigator.serviceWorker.ready;
-      }
-      
+
+      const todayStr = dateKey(now);
+      const progressByGoal = new Map(
+        goalDailyProgress
+          .filter(item => item.date === todayStr)
+          .map(item => [item.goalId, item]),
+      );
+
       goals.forEach(goal => {
-        // Only remind for incomplete goals
-        if (goal.completed) return;
-        
-        // Check if goal is scheduled for today
-        const isDaily = goal.repeatType === 'daily' || (goal.isRepeatable && goal.repeatType !== 'weekly');
-        const isWeekly = goal.repeatType === 'weekly' && goal.repeatDays?.includes(today);
-        const isOneTime = (!goal.repeatType || goal.repeatType === 'none') && !goal.isRepeatable;
-        
-        if (!isDaily && !isWeekly && !isOneTime) return;
+        const progress = progressByGoal.get(goal.id);
+        if (!shouldRemindGoal(goal, progress, now, userStats.pauseMode ?? 'none')) return;
 
-        const scheduledTimes = goal.reminderTimes || [];
-        if (scheduledTimes.length === 0) return;
+        const scheduledTimes = (goal.reminderTimes ?? [])
+          .map(normalizeReminderTime)
+          .filter((value): value is string => Boolean(value));
+        if (!scheduledTimes.includes(currentHHmm)) return;
 
-        // Frequency check
-        const todayStr = dateKey(now);
         const dayKey = `reminded-${goal.id}-${todayStr}`;
-        
-        if (scheduledTimes.includes(currentHHmm)) {
-          if (goal.reminderFrequency === 'once' && lastReminderRef.current[dayKey]) {
-            return;
-          }
+        if (goal.reminderFrequency === 'once' && lastReminderRef.current[dayKey]) return;
 
-          const timeKey = `${goal.id}-${todayStr}-${currentHHmm}`;
-          if (lastReminderRef.current[timeKey] !== currentHHmm) {
-            // App-level notification (Toast)
-            setNotification({ 
-              title: "Quest Reminder",
-              message: formatImplementationIntention(goal) ?? goal.title,
-              xp: 0 
-            });
-            playSound('notification');
+        const timeKey = `${goal.id}-${todayStr}-${currentHHmm}`;
+        if (lastReminderRef.current[timeKey] === currentHHmm) return;
 
-            lastReminderRef.current[timeKey] = currentHHmm;
-            lastReminderRef.current[dayKey] = currentHHmm;
-            
-            // System-level notification (Lock screen / Background)
-            if ("Notification" in window && Notification.permission === "granted") {
-              if (swRegistration) {
-                (swRegistration as any).showNotification("Quest Reminder", {
-                  body: goal.title,
-                  icon: '/favicon.ico',
-                  tag: `quest-${goal.id}`, // Single tag per quest to avoid notification clutter
-                  renotify: true,
-                  vibrate: [200, 100, 200],
-                  data: { goalId: goal.id },
-                  actions: [
-                    { action: 'complete', title: 'Complete ✓' },
-                    { action: 'snooze', title: 'Snooze ⏱' }
-                  ]
-                } as any).catch((err: any) => console.error("SW notification error:", err));
-              } else {
-                try {
-                  new Notification("Quest Reminder", { body: goal.title, icon: '/favicon.ico' });
-                } catch (e) {
-                  console.error("System notification error:", e);
-                }
-              }
-            }
-          }
+        setNotification({
+          title: 'Quest Reminder',
+          message: formatImplementationIntention(goal) ?? goal.title,
+          xp: 0,
+        });
+        playSound('notification');
+
+        lastReminderRef.current[timeKey] = currentHHmm;
+        lastReminderRef.current[dayKey] = currentHHmm;
+
+        if (notificationBackend === 'web' && notificationPermission === 'granted') {
+          void showWebReminder(goal);
         }
       });
     };
 
-    const interval = setInterval(checkReminders, 15000); // Check every 15 seconds to ensure we don't miss a minute
-    checkReminders(); // Initial check
+    const interval = setInterval(checkReminders, 15000);
+    checkReminders();
     return () => clearInterval(interval);
-  }, [goals, checkDayChange]);
+  }, [
+    goals,
+    goalDailyProgress,
+    checkDayChange,
+    notificationBackend,
+    notificationPermission,
+    userStats.pauseMode,
+  ]);
+
+  useEffect(() => {
+    if (!isLoaded) return undefined;
+    return registerNativeNotificationHandlers();
+  }, [isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded || notificationBackend !== 'native') return;
+    void syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
+  }, [goals, isLoaded, notificationBackend, notificationPermission, userStats.pauseMode]);
 
   // Reset repeatable quests daily and apply penalties
   useEffect(() => {
@@ -2876,15 +2868,24 @@ export default function App() {
           playSound(sound);
         }}
         onEnableNotifications={async () => {
-          if (!('Notification' in window)) return;
-          const permission = await Notification.requestPermission();
-          setUserStats(prev => ({ ...prev }));
+          const permission = await requestNotificationPermission();
+          if (notificationBackend === 'native' && permission === 'granted') {
+            await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
+          }
           setNotification({
             title: 'Notifications',
-            message: permission === 'granted' ? 'Notifications authorized' : `Permission ${permission}`,
+            message: permission === 'granted'
+              ? notificationBackend === 'native'
+                ? 'Native reminders enabled'
+                : 'Notifications authorized'
+              : permission === 'denied'
+                ? 'Permission blocked — enable in system settings'
+                : `Permission ${permission}`,
             xp: 0,
           });
         }}
+        notificationPermission={notificationPermission}
+        notificationBackend={notificationBackend}
         onInstall={handleInstall}
         canInstall={Boolean(installPrompt)}
         onTestSound={() => {
@@ -3120,8 +3121,9 @@ export default function App() {
               className="space-y-4"
             >
               {recoveringHabits.length > 0 && (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                  <strong>Never miss twice:</strong> {mentorMessage('recovery', mentorPersonality, recoveringHabits[0]?.title ?? 'a habit')}
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-950">
+                  <strong className="text-amber-950">Never miss twice:</strong>{' '}
+                  {mentorMessage('recovery', mentorPersonality, recoveringHabits[0]?.title ?? 'a habit')}
                   {recoveringHabits.length > 1 ? ` (+${recoveringHabits.length - 1} more)` : ''}
                 </div>
               )}
@@ -4045,7 +4047,7 @@ export default function App() {
                       ))}
                     </div>
                     <div className="space-y-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
-                      <p className="text-xs font-bold text-amber-400">Native integrations</p>
+                      <p className="text-xs font-bold text-amber-800">Native integrations</p>
                       <p className="text-[10px] text-gray-500">Apple Health / Health Connect, widgets, and iCloud require a future native build. They are disabled and never affect web scoring.</p>
                     </div>
                   </section>
@@ -4100,7 +4102,7 @@ export default function App() {
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Mentor tone</h3>
                     <p className="text-[10px] text-gray-500">Used for recovery, Goldilocks, two-minute, and bundle nudges.</p>
                     <div className="grid grid-cols-3 gap-2">
-                      {(['Supportive', 'Sarcastic', 'Stoic'] as const).map(mentor => (
+                      {MENTOR_PERSONALITIES.map(mentor => (
                         <button
                           key={mentor}
                           type="button"
@@ -4159,36 +4161,35 @@ export default function App() {
                          </div>
                        </div>
 
-                       {!("Notification" in window) ? (
-                         <div className="flex items-center gap-3 text-orange-400/80">
+                       {notificationBackend === 'none' ? (
+                         <div className="flex items-center gap-3 text-orange-600/90">
                            <Ban size={18} />
-                           <p className="text-[10px] font-bold uppercase">Not supported by browser</p>
+                           <p className="text-[10px] font-bold uppercase">Not supported in this environment</p>
                          </div>
                        ) : (
+                         <div className="space-y-3">
                          <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Bell size={18} className={Notification.permission === 'granted' ? "text-blue-400" : "text-gray-400"} />
+                            <Bell size={18} className={notificationPermission === 'granted' ? "text-blue-400" : "text-gray-400"} />
                             <div className="flex flex-col">
                               <p className="text-sm font-medium">Status</p>
-                              <p className={cn(
-                                "text-[9px] font-black uppercase tracking-widest",
-                                Notification.permission === 'granted' ? "text-green-400" : 
-                                Notification.permission === 'denied' ? "text-red-400" : "text-yellow-400"
-                              )}>
-                                {Notification.permission === 'granted' ? 'Authorized' : 
-                                 Notification.permission === 'denied' ? 'Blocked in Browser' : 'Permission Required'}
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                                {notificationBackend === 'native' ? 'Android native · ' : 'Browser · '}
+                                {notificationPermission === 'granted' ? 'Authorized' :
+                                 notificationPermission === 'denied' ? 'Blocked' : 'Permission required'}
                               </p>
                             </div>
                           </div>
-                          {Notification.permission !== 'granted' && Notification.permission !== 'denied' && (
+                          {notificationPermission !== 'granted' && notificationPermission !== 'denied' && (
                             <button 
                               onClick={async () => {
-                                const res = await Notification.requestPermission();
+                                const res = await requestNotificationPermission();
                                 if (res === 'granted') {
+                                  if (notificationBackend === 'native') {
+                                    await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
+                                  }
                                   setNotification({ title: "System Info", message: "Notifications Authorized!", xp: 0 });
                                 }
-                                // Force re-render of settings
-                                setUserStats(s => ({...s}));
                               }}
                               className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
                             >
@@ -4196,13 +4197,29 @@ export default function App() {
                             </button>
                           )}
                         </div>
+                        {notificationBackend === 'web' && notificationPermission === 'granted' && (
+                          <p className="text-[9px] text-slate-500 leading-tight">
+                            In-browser reminders fire while the app is open. Install as a PWA for lock-screen alerts.
+                          </p>
+                        )}
+                        {notificationBackend === 'native' && notificationPermission === 'granted' && (
+                          <p className="text-[9px] text-slate-500 leading-tight">
+                            Habit reminders are scheduled on-device via local notifications.
+                          </p>
+                        )}
+                        {notificationPermission === 'denied' && (
+                          <p className="text-[9px] text-red-500/90 leading-tight">
+                            Blocked — enable in {notificationBackend === 'native' ? 'Android app settings' : 'browser site settings'}.
+                          </p>
+                        )}
+                        </div>
                        )}
                        
                        <div className="space-y-2 pt-2 border-t border-gray-800/50">
                          <div className="flex items-start gap-2">
                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1 shrink-0" />
                            <p className="text-[9px] text-gray-400 font-medium leading-tight">
-                             Quests must be <span className="text-blue-400">active</span> (not completed) to trigger reminders.
+                             Reminders skip habits already logged today (including two-minute mode).
                            </p>
                          </div>
                          <div className="flex items-start gap-2">
@@ -4211,12 +4228,14 @@ export default function App() {
                              Daily reminders fire daily. Weekly reminders fire only on selected days.
                            </p>
                          </div>
+                         {notificationBackend === 'web' && (
                          <div className="flex items-start gap-2">
                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1 shrink-0" />
-                           <p className="text-[9px] text-orange-400/80 font-bold leading-tight">
-                             PRO TIP: For background notifications when phone is locked, keep the app open in a browser tab.
+                           <p className="text-[9px] text-amber-800 font-bold leading-tight">
+                             Web: lock-screen alerts need the PWA installed with notification permission granted.
                            </p>
                          </div>
+                         )}
                        </div>
                     </div>
                   </section>
@@ -5126,7 +5145,7 @@ export default function App() {
                       <input className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white" value={newQuestTrackingMode === 'timer' ? 'minutes' : newQuestUnit} disabled={newQuestTrackingMode === 'timer'} onChange={event => setNewQuestUnit(event.target.value)} aria-label="Target unit" />
                     </div>
                   )}
-                  {newQuestTrackingMode === 'health' && <p className="text-[9px] text-amber-400">Read-only web placeholder; excluded from XP and daily-goal scoring.</p>}
+                  {newQuestTrackingMode === 'health' && <p className="text-[9px] text-amber-800">Read-only web placeholder; excluded from XP and daily-goal scoring.</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-gray-500">Routine</label>

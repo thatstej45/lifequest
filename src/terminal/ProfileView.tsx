@@ -3,6 +3,8 @@ import { Goal, Routine, ScorecardRating, UserStats } from '../types';
 import { THEME_OPTIONS, ThemeId } from '../theme';
 import { ScorecardPanel } from '../components/HabitCoachingPanels';
 import { trackingMode } from '../habits/habitDomain';
+import { MENTOR_PERSONALITIES, normalizeMentorPersonality } from '../habits/mentorPersonality';
+import type { NotificationBackend, NotificationPermissionState } from '../services/habitReminders';
 
 interface ProfileViewProps {
   userStats: UserStats;
@@ -15,6 +17,8 @@ interface ProfileViewProps {
   onReset: () => void;
   onNotificationSound: (sound: string) => void;
   onEnableNotifications: () => void;
+  notificationPermission: NotificationPermissionState;
+  notificationBackend: NotificationBackend;
   onInstall: () => void;
   canInstall: boolean;
   onTestSound: () => void;
@@ -26,11 +30,7 @@ interface ProfileViewProps {
   onAddScorecardQuests: (created: Goal[]) => void;
 }
 
-const MENTORS: Array<NonNullable<UserStats['mentorPersonality']>> = [
-  'Supportive',
-  'Sarcastic',
-  'Stoic',
-];
+const MENTORS = MENTOR_PERSONALITIES;
 
 export default function ProfileView({
   userStats,
@@ -43,6 +43,8 @@ export default function ProfileView({
   onReset,
   onNotificationSound,
   onEnableNotifications,
+  notificationPermission,
+  notificationBackend,
   onInstall,
   canInstall,
   onTestSound,
@@ -235,7 +237,7 @@ export default function ProfileView({
               key={mentor}
               type="button"
               className={`term-token${
-                (userStats.mentorPersonality ?? 'Sarcastic') === mentor ? ' is-active' : ''
+                normalizeMentorPersonality(userStats.mentorPersonality) === mentor ? ' is-active' : ''
               }`}
               onClick={() => onSelectMentor(mentor)}
             >
@@ -264,17 +266,20 @@ export default function ProfileView({
           ))}
           <button type="button" className="term-token is-action" onClick={onTestSound}>[test sound]</button>
         </div>
-        {'Notification' in window ? (
+        {notificationBackend === 'none' ? (
+          <p className="term-comment is-nested">{'// notifications are not supported in this environment'}</p>
+        ) : (
           <>
-            <p className="term-comment is-nested">{`// permission: ${Notification.permission}`}</p>
-            {Notification.permission === 'default' && (
+            <p className="term-comment is-nested">{`// backend: ${notificationBackend} · permission: ${notificationPermission}`}</p>
+            {notificationPermission === 'default' && (
               <button type="button" className="term-token is-action term-nested-action" onClick={onEnableNotifications}>
                 [enable notifications]
               </button>
             )}
+            {notificationPermission === 'denied' && (
+              <p className="term-comment is-nested">{`// blocked — enable in ${notificationBackend === 'native' ? 'android settings' : 'browser settings'}`}</p>
+            )}
           </>
-        ) : (
-          <p className="term-comment is-nested">{'// notifications are not supported by this browser'}</p>
         )}
         <p className="term-comment is-nested">{'// unfinished habits remind you at their set times'}</p>
       </section>
