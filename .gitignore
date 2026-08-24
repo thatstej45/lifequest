@@ -17,6 +17,17 @@ android/local.properties
 android/.idea/
 *.apk
 *.aab
+*.ipa
+*.dSYM.zip
 *.keystore
 *.jks
 mobile-release/
+site/
+ios/vendor/
+ios/.bundle/
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/App/build/
+ios/build/
+*.p12
+*.mobileprovision

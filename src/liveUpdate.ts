@@ -359,8 +359,13 @@ export async function initLiveUpdates() {
     window.location.reload();
   });
 
+  // Resolved against the document so the same bundle works from a GitHub Pages
+  // subpath (/lifequest/) and from the site root.
+  const swUrl = new URL(`${import.meta.env.BASE_URL}sw.js`, document.baseURI).href;
+  const swScope = new URL(import.meta.env.BASE_URL, document.baseURI).href;
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(registration => {
+    navigator.serviceWorker.register(swUrl, { scope: swScope, updateViaCache: 'none' }).then(registration => {
       void runAutomaticWebUpdate();
       window.setInterval(() => void runAutomaticWebUpdate(), WEB_UPDATE_CHECK_INTERVAL_MS);
       document.addEventListener('visibilitychange', () => {

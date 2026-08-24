@@ -1,6 +1,9 @@
 /* Service Worker Version: dev */
 const VERSION = 'dev';
 const channel = new BroadcastChannel('lifequest_channel');
+// The worker ships next to index.html, so its own directory is the app root
+// whether that is / or a GitHub Pages subpath like /lifequest/.
+const APP_ROOT = new URL('./', self.location.href).href;
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
@@ -43,8 +46,15 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => {
-        return caches.match(event.request);
+      .catch(async () => {
+        const cached = await caches.match(event.request, { ignoreSearch: true });
+        if (cached) return cached;
+        // start_url carries a query string, so an offline launch has to fall
+        // back to the cached shell rather than an exact URL match.
+        if (event.request.mode === 'navigate') {
+          return caches.match(APP_ROOT, { ignoreSearch: true });
+        }
+        return Response.error();
       })
   );
 });
@@ -73,7 +83,7 @@ self.addEventListener('notificationclick', (event) => {
         }
         return client.focus();
       }
-      return clients.openWindow('/' + (goalId ? '?completeId=' + goalId : ''));
+      return clients.openWindow(APP_ROOT + (goalId ? '?completeId=' + goalId : ''));
     })
   );
 });

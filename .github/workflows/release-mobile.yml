@@ -39,11 +39,17 @@ jobs:
           OTA_PUBLIC_BASE: https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages
         run: node scripts/package-ota.mjs
 
-      - name: Publish live-update channel
+      - name: Assemble Pages site
+        run: |
+          rm -rf site
+          cp -r dist site
+          cp mobile-release/update.json mobile-release/dist.zip site/
+
+      - name: Publish web app and live-update channel
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: mobile-release
+          publish_dir: site
           force_orphan: true
 
       - name: Sync Android project

@@ -44,7 +44,21 @@ The first sideload requires allowing **Install unknown apps** for Files or Chrom
 The app repo is [thatstej45/lifequest](https://github.com/thatstej45/lifequest). Every push to `main` runs `.github/workflows/release-mobile.yml`, which:
 
 1. Builds the web app
-2. Publishes an OTA bundle on the `gh-pages` branch (`https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages/`)
+2. Publishes the built app **and** an OTA bundle on the `gh-pages` branch, so
+   `https://thatstej45.github.io/lifequest/` is the live app and
+   `https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages/update.json` is the Android update channel
 3. Builds a debug APK artifact you can sideload when native code changes
 
 After the APK that includes the live-update plugin is installed once, later UI/logic pushes update the phone automatically the next time the app is opened (or brought back to the foreground). Native changes (new plugins, permissions, icons) still need a fresh APK install.
+
+## Install on iPhone (home-screen web app)
+
+iOS has no sideloading, so the same web app installs as a PWA instead. Chrome on iOS cannot do this — it must be Safari.
+
+1. Open `https://thatstej45.github.io/lifequest/` in **Safari**
+2. Tap **Share**
+3. Tap **Add to Home Screen**, then **Add**
+
+It then launches full-screen with its own icon, keeps working offline, and picks up new deploys on the next launch. Data lives on that device only; it does not sync with the Android install.
+
+Repo **Settings → Pages** must be set to deploy from the `gh-pages` branch (root) for this URL to work. The build uses relative asset paths, so it runs from the `/lifequest/` project path as well as a custom domain.

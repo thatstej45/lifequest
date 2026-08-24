@@ -2,33 +2,33 @@
   "name": "LifeQuest: Level Up Your Life",
   "short_name": "LifeQuest",
   "description": "Gamify your life by turning tasks into quests and skills into levels.",
-  "id": "/?utm_source=pwa",
-  "start_url": "/?utm_source=pwa",
-  "scope": "/",
+  "id": "./?utm_source=pwa",
+  "start_url": "./?utm_source=pwa",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f0f12",
   "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "/icon_lightning.png",
+      "src": "./icon_lightning.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon_lightning.png",
+      "src": "./icon_lightning.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon_lightning.png",
+      "src": "./icon_lightning.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon_lightning.png",
+      "src": "./icon_lightning.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -37,19 +37,5 @@ const manifest = {
 };
 
 await writeFile(path.join(outDir, 'update.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-await writeFile(
-  path.join(outDir, 'index.html'),
-  `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>LifeQuest updates</title>
-  </head>
-  <body>
-    <p>LifeQuest OTA channel ${version}. Sideload the APK, then later git pushes update the installed app automatically.</p>
-  </body>
-</html>
-`,
-);
 
 console.log(`Packaged OTA bundle ${version} (${checksum})`);
