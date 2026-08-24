@@ -2158,6 +2158,46 @@ html[data-theme="terminal"] .term-inline-select .term-select-trigger {
 
 html[data-theme="terminal"] .term-inline-select .term-select-list { left: auto; right: 0; font-size: 11px; }
 
+html[data-theme="terminal"] .term-skill-web {
+  margin: 14px 0 18px;
+  padding: 10px 12px 4px;
+  border-block: 1px solid var(--terminal-border);
+}
+
+html[data-theme="terminal"] .term-skill-web svg {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+html[data-theme="terminal"] .term-skill-web-grid {
+  fill: none;
+  stroke: var(--terminal-border);
+  stroke-width: 1;
+}
+
+html[data-theme="terminal"] .term-skill-web-axis {
+  stroke: var(--terminal-border);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+html[data-theme="terminal"] .term-skill-web-value {
+  fill: rgba(69, 185, 199, 0.14);
+  stroke: var(--terminal-cyan);
+  stroke-width: 2;
+}
+
+html[data-theme="terminal"] .term-skill-web-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
 @media (max-width: 760px) {
   html[data-theme="terminal"] .term-quest-row.is-dense .term-row-inline,
   html[data-theme="terminal"] .term-skill-row.is-dense .term-row-inline,

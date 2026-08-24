@@ -60,7 +60,8 @@ import {
   Moon,
   Check,
   CalendarCheck,
-  Copy
+  Copy,
+  ListChecks
 } from 'lucide-react';
 import { 
   Radar, 
@@ -85,10 +86,12 @@ import {
 } from './types';
 import { INITIAL_CATEGORIES } from './constants';
 import DynamicBackground from './components/layout/DynamicBackground';
+import ClayRoutinesView from './components/ClayRoutinesView';
 import NavButton from './components/layout/NavButton';
 import { HabitIcon, IconPicker } from './components/icons';
 import { ContributionHeatmap, MonthCalendar, TrendBars, WeekdayBars, WeeklyHabitMatrix } from './components/charts';
 import TerminalShell from './terminal/TerminalShell';
+import { useSwipeTabs } from './hooks/useSwipeTabs';
 import { applyTheme, getStoredTheme, THEME_OPTIONS, ThemeId } from './theme';
 import {
   applyXp,
@@ -119,6 +122,8 @@ import {
 import { Howl } from 'howler';
 
 const FinanceTracker = lazy(() => import('./components/FinanceTracker'));
+type AppTab = 'home' | 'stats' | 'goals' | 'routines' | 'finance';
+const APP_TABS: AppTab[] = ['home', 'stats', 'goals', 'routines', 'finance'];
 
 // --- Audio Manager ---
 const NOTIF_SOUNDS = {
@@ -1775,7 +1780,8 @@ export default function App() {
     checkDayChange();
   }, [checkDayChange]);
 
-  const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'goals' | 'finance'>('home');
+  const [activeTab, setActiveTab] = useState<AppTab>('home');
+  const swipeTabs = useSwipeTabs<AppTab>(APP_TABS, activeTab, setActiveTab);
   const [financeBalances, setFinanceBalances] = useState({
     bank: 0,
     cash: 0,
@@ -2884,7 +2890,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto p-4 space-y-4">
+      <main className="max-w-md mx-auto p-4 space-y-4" style={{ touchAction: 'pan-y' }} {...swipeTabs}>
         <AnimatePresence mode="wait">
           {activeTab === 'home' && (
             <motion.div 
@@ -3550,6 +3556,41 @@ export default function App() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'routines' && (
+            <motion.div
+              key="routines"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ClayRoutinesView
+                routines={routines}
+                goals={goals}
+                onSaveRoutine={routine => {
+                  setRoutines(previous => previous.some(item => item.id === routine.id)
+                    ? previous.map(item => item.id === routine.id ? routine : item)
+                    : [...previous, routine]);
+                  setNotification({ title: 'Routine saved', message: routine.name, xp: 0 });
+                }}
+                onDeleteRoutine={id => {
+                  setRoutines(previous => previous.filter(item => item.id !== id));
+                  setGoals(previous => previous.map(goal => goal.routineId === id ? { ...goal, routineId: undefined } : goal));
+                }}
+                onMoveRoutine={(id, direction) => {
+                  setRoutines(previous => {
+                    const ordered = [...previous].sort((a, b) => a.sortOrder - b.sortOrder);
+                    const index = ordered.findIndex(item => item.id === id);
+                    const target = index + direction;
+                    if (index < 0 || target < 0 || target >= ordered.length) return previous;
+                    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+                    return ordered.map((item, sortOrder) => ({ ...item, sortOrder }));
+                  });
+                }}
+                onSaveGoal={goal => setGoals(previous => previous.map(item => item.id === goal.id ? goal : item))}
+              />
             </motion.div>
           )}
 
@@ -4569,7 +4610,7 @@ export default function App() {
     </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-xl border-t border-gray-800 px-6 py-4">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-xl border-t border-gray-800 px-2 py-3">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <NavButton 
             active={activeTab === 'home'} 
@@ -4588,6 +4629,12 @@ export default function App() {
             onClick={() => setActiveTab('goals')} 
             icon={Trophy} 
             label="Quests" 
+          />
+          <NavButton
+            active={activeTab === 'routines'}
+            onClick={() => setActiveTab('routines')}
+            icon={ListChecks}
+            label="Routines"
           />
           <NavButton 
             active={activeTab === 'finance'} 

@@ -35,6 +35,77 @@ type DeleteTarget = { kind: 'category' | 'skill'; id: string; name: string };
 
 const EMPTY_CATEGORY: CategoryDraft = { name: '', icon: 'Target', color: '#22c55e' };
 
+function TerminalSkillWeb({ categories }: { categories: Category[] }) {
+  const cx = 160;
+  const cy = 112;
+  const radius = 72;
+  const count = categories.length;
+  if (count < 3) {
+    return <p className="term-comment">{'// add at least 3 skill categories to draw the web'}</p>;
+  }
+
+  const position = (index: number, scale = 1) => {
+    const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
+    return {
+      x: cx + Math.cos(angle) * radius * scale,
+      y: cy + Math.sin(angle) * radius * scale,
+    };
+  };
+  const points = (scale: number) =>
+    categories.map((_, index) => {
+      const point = position(index, scale);
+      return `${point.x},${point.y}`;
+    }).join(' ');
+  const skillPoints = categories.map((category, index) => {
+    const average = category.skills.length
+      ? category.skills.reduce((total, skill) => total + skill.level, 0) / category.skills.length
+      : 0;
+    const point = position(index, Math.min(1, average / 10));
+    return `${point.x},${point.y}`;
+  }).join(' ');
+
+  return (
+    <section className="term-skill-web" aria-label="Skill web diagram">
+      <div className="term-section-head">
+        <h2 className="term-section-title is-cyan">skill web</h2>
+        <span className="term-comment">{'// average level by category'}</span>
+      </div>
+      <svg viewBox="0 0 320 230" role="img" aria-label="Radar chart of skill category levels">
+        {[0.25, 0.5, 0.75, 1].map(scale => (
+          <polygon key={scale} points={points(scale)} className="term-skill-web-grid" />
+        ))}
+        {categories.map((category, index) => {
+          const edge = position(index);
+          const label = position(index, 1.26);
+          return (
+            <g key={category.id}>
+              <line x1={cx} y1={cy} x2={edge.x} y2={edge.y} className="term-skill-web-axis" />
+              <text
+                x={label.x}
+                y={label.y}
+                textAnchor={Math.abs(label.x - cx) < 12 ? 'middle' : label.x > cx ? 'start' : 'end'}
+                dominantBaseline="middle"
+                fill={category.color}
+                className="term-skill-web-label"
+              >
+                {category.name}
+              </text>
+            </g>
+          );
+        })}
+        <polygon points={skillPoints} className="term-skill-web-value" />
+        {categories.map((category, index) => {
+          const average = category.skills.length
+            ? category.skills.reduce((total, skill) => total + skill.level, 0) / category.skills.length
+            : 0;
+          const point = position(index, Math.min(1, average / 10));
+          return <circle key={category.id} cx={point.x} cy={point.y} r="3" fill={category.color} />;
+        })}
+      </svg>
+    </section>
+  );
+}
+
 export default function SkillsView({
   userStats,
   categories,
@@ -140,6 +211,8 @@ export default function SkillsView({
         <span className="term-prompt-cmd">skills --list</span>
       </p>
       <p className="term-comment">{`// ${categories.length} categories · ${userStats.skillPoints} skill points available`}</p>
+
+      <TerminalSkillWeb categories={categories} />
 
       <div className="term-command-row">
         <button type="button" className="term-token is-action" onClick={() => setCategoryDraft(EMPTY_CATEGORY)}>

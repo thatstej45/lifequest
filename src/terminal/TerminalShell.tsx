@@ -8,6 +8,7 @@ import SkillsView from './SkillsView';
 import QuestsView from './QuestsView';
 import RoutinesView from './RoutinesView';
 import FinanceView from './FinanceView';
+import { useSwipeTabs } from '../hooks/useSwipeTabs';
 
 type TerminalTab = 'quests' | 'routines' | 'skills' | 'stats' | 'finance' | 'settings';
 
@@ -93,9 +94,10 @@ export default function TerminalShell({
   notification,
 }: TerminalShellProps) {
   const [tab, setTab] = useState<TerminalTab>('quests');
+  const swipeTabs = useSwipeTabs<TerminalTab>(TABS, tab, setTab);
 
   return (
-    <div className="term-root">
+    <div className="term-root" {...swipeTabs}>
       <nav className="term-tabs" role="tablist" aria-label="Terminal sections">
         {TABS.map(entry => (
           <button

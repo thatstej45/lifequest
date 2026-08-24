@@ -13,13 +13,13 @@ export default function NavButton({ active, onClick, icon: Icon, label }: NavBut
     <button
       onClick={onClick}
       className={cn(
-        'app-nav-button flex flex-col items-center gap-1.5 transition-all duration-300',
+        'app-nav-button min-w-0 flex-1 flex flex-col items-center gap-1 transition-all duration-300',
         active ? 'is-active scale-105' : 'hover:scale-105',
       )}
     >
       <div
         className={cn(
-          'app-nav-icon w-11 h-11 rounded-xl transition-all flex items-center justify-center border',
+          'app-nav-icon w-10 h-10 rounded-xl transition-all flex items-center justify-center border',
           active
             ? 'border-white/80'
             : 'border-transparent bg-transparent text-slate-500 hover:text-slate-800',
@@ -29,7 +29,7 @@ export default function NavButton({ active, onClick, icon: Icon, label }: NavBut
       </div>
       <span
         className={cn(
-          'app-nav-label text-[9px] font-black uppercase tracking-wider transition-colors duration-200',
+          'app-nav-label max-w-full truncate text-[8px] font-black uppercase tracking-tight transition-colors duration-200',
           active ? 'text-blue-600 font-extrabold' : 'text-slate-500',
         )}
       >
