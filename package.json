@@ -13,12 +13,18 @@
     "android:open": "cap open android",
     "android:apk": "npm run android:sync && npm run android:assemble",
     "android:assemble": "node scripts/android-assemble.mjs",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "ios:set-version": "node scripts/ios-set-version.mjs",
+    "ios:beta": "npm run ios:sync && npm run ios:set-version && npm run ios:fastlane",
+    "ios:fastlane": "cd ios && bundle exec fastlane beta",
     "ota:package": "node scripts/package-ota.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.1",
     "@capgo/capacitor-updater": "^8.51.14",

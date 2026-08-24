@@ -7,8 +7,13 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
   },
+  ios: {
+    contentInset: 'automatic',
+    scheme: 'LifeQuest',
+  },
   server: {
     androidScheme: 'https',
+    iosScheme: 'https',
   },
   plugins: {
     CapacitorUpdater: {
