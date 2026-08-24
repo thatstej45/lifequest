@@ -127,7 +127,6 @@ import {
 import { goldilocksSuggestions, applyEasierSuggestion, applyHarderSuggestion } from './habits/goldilocks';
 import { mentorMessage } from './habits/mentorCopy';
 import { canCompleteNow, consecutiveMissPenaltyDue } from './habits/commitment';
-import { isVagueHabit } from './habits/scorecard';
 import { logSkipAndSave } from './habits/financeHonor';
 import RoutineRunner from './components/RoutineRunner';
 import { GoldilocksBanner, ScorecardPanel } from './components/HabitCoachingPanels';
@@ -4095,6 +4094,28 @@ export default function App() {
                         $ theme --apply {settingsTheme} // saves with “Save changes”
                       </p>
                     )}
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Mentor tone</h3>
+                    <p className="text-[10px] text-gray-500">Used for recovery, Goldilocks, two-minute, and bundle nudges.</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Supportive', 'Sarcastic', 'Stoic'] as const).map(mentor => (
+                        <button
+                          key={mentor}
+                          type="button"
+                          onClick={() => setSettingsPersonality(mentor)}
+                          className={cn(
+                            'rounded-xl border px-2 py-2.5 text-[10px] font-bold uppercase tracking-tighter transition-all',
+                            settingsPersonality === mentor
+                              ? 'bg-violet-600 border-violet-500 text-white shadow-md'
+                              : 'bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-600',
+                          )}
+                        >
+                          {mentor}
+                        </button>
+                      ))}
+                    </div>
                   </section>
 
                   {/* Notifications Section */}
