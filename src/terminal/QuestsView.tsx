@@ -18,6 +18,9 @@ import {
 import { goldilocksSuggestions } from '../habits/goldilocks';
 import { mentorMessage } from '../habits/mentorCopy';
 import { isVagueHabit, SCORECARD_RATINGS } from '../habits/scorecard';
+import { BreakModeList, BreakModePanel } from '../components/BreakModePanel';
+import { isBreakModeHabit } from '../habits/breakMode';
+import type { HabitKind } from '../types';
 import RoutineRunner from '../components/RoutineRunner';
 import { GoldilocksBanner } from '../components/HabitCoachingPanels';
 import { HabitIcon, IconPicker } from '../components/icons';
@@ -51,6 +54,9 @@ interface QuestsViewProps {
   onApplyGoldilocks: (goalId: string, kind: 'easier' | 'harder') => void;
   onDismissGoldilocks: (goalId: string) => void;
   onSkipAndSave: (goal: Goal) => void | Promise<void>;
+  onAddInversionQuests?: (created: Goal[]) => void;
+  pendingEditGoalId?: string | null;
+  onClearPendingEdit?: () => void;
 }
 
 type SkillOption = Skill & { category: Category };
@@ -206,6 +212,7 @@ function QuestRow({
         style={color ? { color } : undefined}
       >
         <HabitIcon name={goal.icon ?? 'Target'} size={13} aria-hidden /> {goal.title}
+        {isBreakModeHabit(goal) && <span className="term-tag is-bad">break</span>}
       </span>
 
       {mode === 'counter' && (
@@ -343,6 +350,7 @@ function HabitDraftPanel({
   onChange,
   onSubmit,
   onCancel,
+  onAddInversionQuests,
 }: {
   draft: Goal;
   skills: SkillOption[];
@@ -352,7 +360,10 @@ function HabitDraftPanel({
   onChange: (draft: Goal) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
+  onAddInversionQuests?: (created: Goal[]) => void;
 }) {
+  const buildHabits = goals.filter(goal => (goal.habitKind ?? 'build') === 'build' && goal.id !== draft.id);
+
   return (
     <TerminalCommandPanel command={draft.id ? 'habit --edit' : 'habit --new'} onCancel={onCancel}>
       <form className="term-form" onSubmit={onSubmit}>
@@ -425,6 +436,43 @@ function HabitDraftPanel({
             ))}
           </div>
         </fieldset>
+        <fieldset className="term-fieldset">
+          <legend>habit mode</legend>
+          <div className="term-filter-row">
+            {(['build', 'break', 'replace'] as HabitKind[]).map(kind => (
+              <button
+                type="button"
+                key={kind}
+                className={`term-token${(draft.habitKind ?? 'build') === kind ? ' is-active' : ''}`}
+                onClick={() => onChange({ ...draft, habitKind: kind })}
+              >
+                {`[${kind}]`}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        {(draft.habitKind === 'replace') && (
+          <label>replacement habit
+            <TerminalSelect
+              ariaLabel="Replacement build habit"
+              value={draft.replacementGoalId ?? ''}
+              onChange={value => onChange({ ...draft, replacementGoalId: value || undefined })}
+              options={[
+                { value: '', label: 'select build habit' },
+                ...buildHabits.map(goal => ({ value: goal.id, label: goal.title })),
+              ]}
+            />
+          </label>
+        )}
+        {isBreakModeHabit(draft) && (
+          <BreakModePanel
+            theme="terminal"
+            goal={draft}
+            goals={goals}
+            onChange={onChange}
+            onAddInversionQuests={onAddInversionQuests}
+          />
+        )}
         <label>bundle reward<input className="term-input" value={draft.bundleReward ?? ''} onChange={event => onChange({ ...draft, bundleReward: event.target.value })} placeholder="wanted reward after completion" /></label>
         <label>skip & save ₹<input className="term-input" type="number" min="0" value={draft.bundleSkipSaveAmount ?? ''} onChange={event => onChange({ ...draft, bundleSkipSaveAmount: event.target.value ? Number(event.target.value) : undefined })} /></label>
         <label>earliest complete<input className="term-input" type="time" value={draft.earliestCompleteTime ?? ''} onChange={event => onChange({ ...draft, earliestCompleteTime: event.target.value || undefined })} /></label>
@@ -527,6 +575,9 @@ export default function QuestsView({
   onApplyGoldilocks,
   onDismissGoldilocks,
   onSkipAndSave,
+  onAddInversionQuests,
+  pendingEditGoalId,
+  onClearPendingEdit,
 }: QuestsViewProps) {
   const [filter, setFilter] = useState<QuestFilter>('today');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -541,6 +592,19 @@ export default function QuestsView({
     const timer = window.setInterval(() => setTimerTick(value => value + 1), 1000);
     return () => window.clearInterval(timer);
   }, [goalDailyProgress]);
+
+  useEffect(() => {
+    if (!pendingEditGoalId) return;
+    const goal = goals.find(item => item.id === pendingEditGoalId);
+    if (goal) {
+      setDraft({
+        ...goal,
+        repeatDays: [...(goal.repeatDays ?? [])],
+        reminderTimes: [...(goal.reminderTimes ?? [])],
+      });
+    }
+    onClearPendingEdit?.();
+  }, [pendingEditGoalId, goals, onClearPendingEdit]);
 
   const now = new Date();
   const today = toISODate(now);
@@ -639,6 +703,7 @@ export default function QuestsView({
       onChange={setDraft}
       onSubmit={submit}
       onCancel={() => setDraft(null)}
+      onAddInversionQuests={onAddInversionQuests}
     />
   );
 
@@ -694,6 +759,11 @@ export default function QuestsView({
         onApply={onApplyGoldilocks}
         onDismiss={onDismissGoldilocks}
       />
+
+      <BreakModeList theme="terminal" goals={goals} onOpenGoal={goalId => {
+        const item = goals.find(goal => goal.id === goalId);
+        if (item) beginEdit(item);
+      }} />
 
       <div className="term-toolbar">
         <div className="term-filter-row">

@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { Category, CompletedQuest, Goal, GoalDailyProgress, HistoryRecord, Routine, ScorecardRating, UserStats } from '../types';
 import { HabitAction } from '../habits/habitDomain';
 import { ThemeId } from '../theme';
@@ -109,6 +109,7 @@ export default function TerminalShell({
   notification,
 }: TerminalShellProps) {
   const [tab, setTab] = useState<TerminalTab>('quests');
+  const [pendingEditGoalId, setPendingEditGoalId] = useState<string | null>(null);
   const swipeTabs = useSwipeTabs<TerminalTab>(TABS, tab, setTab);
 
   return (
@@ -167,6 +168,9 @@ export default function TerminalShell({
             onApplyGoldilocks={onApplyGoldilocks}
             onDismissGoldilocks={onDismissGoldilocks}
             onSkipAndSave={onSkipAndSave}
+            onAddInversionQuests={onAddScorecardQuests}
+            pendingEditGoalId={pendingEditGoalId}
+            onClearPendingEdit={() => setPendingEditGoalId(null)}
           />
         ) : tab === 'routines' ? (
           <RoutinesView
@@ -202,9 +206,15 @@ export default function TerminalShell({
             onRefresh={onRefresh}
             routines={routines}
             goals={goals}
+            history={history}
+            goalDailyProgress={goalDailyProgress}
             onUpdateHabitSettings={onUpdateHabitSettings}
             onRateScorecard={onRateScorecard}
             onAddScorecardQuests={onAddScorecardQuests}
+            onOpenBreakGoal={goalId => {
+              setTab('quests');
+              setPendingEditGoalId(goalId);
+            }}
           />
         )}
       </main>

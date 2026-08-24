@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Category, CompletedQuest, Goal, GoalDailyProgress, HistoryRecord, UserStats } from '../types';
 import { perHabitSummary, trajectorySnapshot, recoveryRate } from '../analytics';
+import { buildQuarterlyReview } from '../habits/quarterlyReview';
 import {
   ContributionHeatmap,
   MonthCalendar,
@@ -106,6 +107,10 @@ export default function StatsView({
     .filter(day => day.samples > 0)
     .reduce((worst, day) => (day.ratio < worst.ratio ? day : worst), bestDay);
   const trajectory = useMemo(() => trajectorySnapshot(history), [history]);
+  const quarterly = useMemo(
+    () => buildQuarterlyReview(userStats, goals, goalDailyProgress, history),
+    [userStats, goals, goalDailyProgress, history],
+  );
 
   return (
     <>
@@ -178,6 +183,18 @@ export default function StatsView({
           ))}
         </section>
       )}
+
+      <section className="term-section">
+        <h2 className="term-section-title is-cyan">quarterly review</h2>
+        <p className="term-comment is-nested">
+          {quarterly.due
+            ? `// review due · ${quarterly.daysSinceLastReview}d since last`
+            : `// next ${quarterly.nextReviewLabel}`}
+        </p>
+        {quarterly.due && (
+          <p className="term-comment">{`// ${quarterly.undecidedCount} habits awaiting keep/change/drop in profile`}</p>
+        )}
+      </section>
 
       <section className="term-section">
         <h2 className="term-section-title is-cyan">trajectory</h2>

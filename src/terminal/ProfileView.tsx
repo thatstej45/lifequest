@@ -1,7 +1,10 @@
 import { ChangeEvent, useEffect, useState } from 'react';
-import { Goal, Routine, ScorecardRating, UserStats } from '../types';
+import { Goal, GoalDailyProgress, HistoryRecord, Routine, ScorecardRating, UserStats } from '../types';
 import { THEME_OPTIONS, ThemeId } from '../theme';
 import { ScorecardPanel } from '../components/HabitCoachingPanels';
+import { QuarterlyReviewPanel } from '../components/QuarterlyReviewPanel';
+import { AccountabilityPanel } from '../components/AccountabilityPanel';
+import { BreakModeList } from '../components/BreakModePanel';
 import { trackingMode } from '../habits/habitDomain';
 import { MENTOR_PERSONALITIES, normalizeMentorPersonality } from '../habits/mentorPersonality';
 import type { NotificationBackend, NotificationPermissionState } from '../services/habitReminders';
@@ -25,9 +28,12 @@ interface ProfileViewProps {
   onRefresh: () => void;
   routines: Routine[];
   goals: Goal[];
+  history: HistoryRecord[];
+  goalDailyProgress: GoalDailyProgress[];
   onUpdateHabitSettings: (settings: Partial<UserStats>) => void;
   onRateScorecard: (goalId: string, rating: ScorecardRating | undefined) => void;
   onAddScorecardQuests: (created: Goal[]) => void;
+  onOpenBreakGoal?: (goalId: string) => void;
 }
 
 const MENTORS = MENTOR_PERSONALITIES;
@@ -51,9 +57,12 @@ export default function ProfileView({
   onRefresh,
   routines,
   goals,
+  history,
+  goalDailyProgress,
   onUpdateHabitSettings,
   onRateScorecard,
   onAddScorecardQuests,
+  onOpenBreakGoal,
 }: ProfileViewProps) {
   const [name, setName] = useState(userStats.name ?? 'Player One');
   const [title, setTitle] = useState(userStats.title ?? 'Master of Life Skills');
@@ -156,6 +165,25 @@ export default function ProfileView({
         onConvertMinus={onAddScorecardQuests}
         onReviewed={() => onUpdateHabitSettings({ scorecardReviewedAt: new Date().toISOString() })}
       />
+
+      <QuarterlyReviewPanel
+        theme="terminal"
+        userStats={userStats}
+        goals={goals}
+        progress={goalDailyProgress}
+        history={history}
+        onSaveReview={onUpdateHabitSettings}
+      />
+
+      <AccountabilityPanel
+        theme="terminal"
+        userStats={userStats}
+        goals={goals}
+        history={history}
+        onUpdateSettings={onUpdateHabitSettings}
+      />
+
+      <BreakModeList theme="terminal" goals={goals} onOpenGoal={onOpenBreakGoal} />
 
       <section className="term-section">
         <h2 className="term-section-title is-good">daily goal & shields</h2>

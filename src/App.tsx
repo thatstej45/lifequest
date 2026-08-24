@@ -82,7 +82,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import {
   Category, UserStats, Goal, Skill, CategoryId, CategoryConsistency, HistoryRecord,
-  CompletedQuest, QuestDifficulty, Routine, GoalDailyProgress, MentorPersonality,
+  CompletedQuest, QuestDifficulty, Routine, GoalDailyProgress, MentorPersonality, HabitKind, BreakInversions,
 } from './types';
 import { INITIAL_CATEGORIES } from './constants';
 import DynamicBackground from './components/layout/DynamicBackground';
@@ -134,6 +134,11 @@ import { canCompleteNow, consecutiveMissPenaltyDue } from './habits/commitment';
 import { logSkipAndSave } from './habits/financeHonor';
 import RoutineRunner from './components/RoutineRunner';
 import { GoldilocksBanner, ScorecardPanel } from './components/HabitCoachingPanels';
+import { QuarterlyReviewPanel } from './components/QuarterlyReviewPanel';
+import { AccountabilityPanel } from './components/AccountabilityPanel';
+import { BreakModeList, BreakModePanel } from './components/BreakModePanel';
+import { breakResistanceMessage, defaultBreakInversions, isBreakModeHabit } from './habits/breakMode';
+import { buildQuarterlyReview } from './habits/quarterlyReview';
 import { trajectorySnapshot, recoveryRate } from './analytics';
 import { useNotificationPermission } from './hooks/useNotificationPermission';
 import {
@@ -1946,6 +1951,9 @@ export default function App() {
   const [newQuestBundleSkipSave, setNewQuestBundleSkipSave] = useState<number | undefined>(undefined);
   const [newQuestEarliestTime, setNewQuestEarliestTime] = useState('');
   const [newQuestMissPenaltyXp, setNewQuestMissPenaltyXp] = useState<number | undefined>(undefined);
+  const [newQuestHabitKind, setNewQuestHabitKind] = useState<HabitKind>('build');
+  const [newQuestBreakInversions, setNewQuestBreakInversions] = useState<BreakInversions>({});
+  const [newQuestReplacementGoalId, setNewQuestReplacementGoalId] = useState('');
   const [settingsIdentityStatements, setSettingsIdentityStatements] = useState<string[]>(['', '', '']);
   const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
   const lastReminderRef = useRef<Record<string, string>>({}); // goalId -> HH:mm to avoid duplicate triggers
@@ -1977,6 +1985,9 @@ export default function App() {
     setNewQuestBundleSkipSave(editingQuest.bundleSkipSaveAmount);
     setNewQuestEarliestTime(editingQuest.earliestCompleteTime ?? '');
     setNewQuestMissPenaltyXp(editingQuest.consecutiveMissPenaltyXp);
+    setNewQuestHabitKind(editingQuest.habitKind ?? 'build');
+    setNewQuestBreakInversions(editingQuest.breakInversions ?? {});
+    setNewQuestReplacementGoalId(editingQuest.replacementGoalId ?? '');
   }, [editingQuest]);
 
   useEffect(() => {
@@ -1995,6 +2006,9 @@ export default function App() {
     setNewQuestBundleSkipSave(undefined);
     setNewQuestEarliestTime('');
     setNewQuestMissPenaltyXp(undefined);
+    setNewQuestHabitKind('build');
+    setNewQuestBreakInversions({});
+    setNewQuestReplacementGoalId('');
   }, [editingQuest, isAddingQuest]);
 
   // Notification permission is requested from Settings / Profile, not on mount (avoids silent denial).
@@ -2237,6 +2251,10 @@ export default function App() {
   };
 
   const trajectory = useMemo(() => trajectorySnapshot(history), [history]);
+  const quarterlyReview = useMemo(
+    () => buildQuarterlyReview(userStats, goals, goalDailyProgress, history),
+    [userStats, goals, goalDailyProgress, history],
+  );
   const recoveringHabits = useMemo(
     () => recoveryGoals(goals, goalDailyProgress),
     [goals, goalDailyProgress],
@@ -2272,7 +2290,7 @@ export default function App() {
   const addScorecardQuests = useCallback((created: Goal[]) => {
     if (!created.length) return;
     setGoals(prev => [...created, ...prev]);
-    setNotification({ title: 'Scorecard quests', message: `Added ${created.length} quest${created.length === 1 ? '' : 's'} from minus habits.`, xp: 0 });
+    setNotification({ title: 'Quests added', message: `Added ${created.length} quest${created.length === 1 ? '' : 's'}.`, xp: 0 });
   }, []);
 
   const handleSkipAndSave = useCallback(async (goal: Goal) => {
@@ -2551,6 +2569,7 @@ export default function App() {
       syncedProgress.historyEntryId = historyEntry.id;
       syncedProgress.completedAt = historyEntry.completedAt;
       const identityMsg = identityVoteMessage(goal, userStats.identityStatements);
+      const breakMsg = isBreakModeHabit(goal) && isLogged ? breakResistanceMessage(goal) : undefined;
       const mentorLine = nextProgress.completionMode === 'twoMinute'
         ? mentorMessage('twoMinute', mentorPersonality, goal.title)
         : goal.bundleReward
@@ -2558,7 +2577,7 @@ export default function App() {
           : undefined;
       setNotification({
         title: goal.bundleReward && isFullyComplete ? 'Bundle unlocked' : undefined,
-        message: [goal.title, identityMsg, mentorLine, goal.bundleReward && isFullyComplete ? goal.bundleReward : undefined].filter(Boolean).join(' · '),
+        message: [goal.title, identityMsg, breakMsg, mentorLine, goal.bundleReward && isFullyComplete ? goal.bundleReward : undefined].filter(Boolean).join(' · '),
         xp: newApplied,
       });
     } else if (!isLogged && wasLogged) {
@@ -3857,6 +3876,14 @@ export default function App() {
               className="space-y-6"
             >
               <h2 className="text-2xl font-black italic">DETAILED STATS</h2>
+              {quarterlyReview.due && (
+                <div className="clay-card border border-cyan-200 bg-cyan-50 p-4 text-xs text-cyan-950">
+                  <p className="font-black">Quarterly review due</p>
+                  <p className="mt-1 text-cyan-900">
+                    Review identity, trajectory, and which habits to keep, change, or drop. Open Settings to complete it.
+                  </p>
+                </div>
+              )}
               <div className="clay-card space-y-2 p-4">
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Trajectory</h3>
                 <div className="grid grid-cols-3 gap-2 text-center">
@@ -4036,6 +4063,34 @@ export default function App() {
                     onRate={rateScorecard}
                     onConvertMinus={addScorecardQuests}
                     onReviewed={() => setUserStats(prev => ({ ...prev, scorecardReviewedAt: new Date().toISOString() }))}
+                  />
+
+                  <QuarterlyReviewPanel
+                    theme="clay"
+                    userStats={userStats}
+                    goals={goals}
+                    progress={goalDailyProgress}
+                    history={history}
+                    onSaveReview={settings => setUserStats(prev => ({ ...prev, ...settings }))}
+                  />
+
+                  <AccountabilityPanel
+                    theme="clay"
+                    userStats={userStats}
+                    goals={goals}
+                    history={history}
+                    onUpdateSettings={settings => setUserStats(prev => ({ ...prev, ...settings }))}
+                  />
+
+                  <BreakModeList
+                    theme="clay"
+                    goals={goals}
+                    onOpenGoal={goalId => {
+                      const goal = goals.find(item => item.id === goalId);
+                      if (!goal) return;
+                      setEditingQuest(goal);
+                      setIsAddingQuest(true);
+                    }}
                   />
 
                   <section className="space-y-4">
@@ -5169,6 +5224,70 @@ export default function App() {
                     </p>
                   )}
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-gray-500">Habit mode</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['build', 'break', 'replace'] as HabitKind[]).map(kind => (
+                      <button
+                        type="button"
+                        key={kind}
+                        onClick={() => {
+                          setNewQuestHabitKind(kind);
+                          if ((kind === 'break' || kind === 'replace') && !Object.keys(newQuestBreakInversions).length) {
+                            setNewQuestBreakInversions(defaultBreakInversions(newQuestTitle || 'habit'));
+                          }
+                        }}
+                        className={cn(
+                          'rounded-xl border px-2 py-2 text-[10px] font-bold uppercase',
+                          newQuestHabitKind === kind
+                            ? kind === 'build'
+                              ? 'bg-blue-600 border-blue-500 text-white'
+                              : 'bg-rose-700 border-rose-600 text-white'
+                            : 'bg-gray-800 border-gray-700 text-gray-400',
+                        )}
+                      >
+                        {kind}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {newQuestHabitKind === 'replace' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500">Replacement build habit</label>
+                    <select
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white"
+                      value={newQuestReplacementGoalId}
+                      onChange={event => setNewQuestReplacementGoalId(event.target.value)}
+                    >
+                      <option value="">Select build habit</option>
+                      {goals.filter(goal => (goal.habitKind ?? 'build') === 'build').map(goal => (
+                        <option key={goal.id} value={goal.id}>{goal.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {(newQuestHabitKind === 'break' || newQuestHabitKind === 'replace') && (
+                  <BreakModePanel
+                    theme="clay"
+                    compact
+                    goal={{
+                      id: editingQuest?.id ?? '',
+                      skillId: manualQuestSkillId,
+                      title: newQuestTitle || 'habit',
+                      completed: false,
+                      xpReward: 0,
+                      habitKind: newQuestHabitKind,
+                      breakInversions: newQuestBreakInversions,
+                      replacementGoalId: newQuestReplacementGoalId || undefined,
+                    }}
+                    goals={goals}
+                    onChange={updated => {
+                      setNewQuestBreakInversions(updated.breakInversions ?? {});
+                      if (updated.replacementGoalId) setNewQuestReplacementGoalId(updated.replacementGoalId);
+                    }}
+                    onAddInversionQuests={addScorecardQuests}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase text-gray-500">Identity vote</label>
@@ -5475,6 +5594,11 @@ export default function App() {
                         bundleSkipSaveAmount: newQuestBundleSkipSave,
                         earliestCompleteTime: newQuestEarliestTime || undefined,
                         consecutiveMissPenaltyXp: newQuestMissPenaltyXp,
+                        habitKind: newQuestHabitKind,
+                        breakInversions: (newQuestHabitKind === 'break' || newQuestHabitKind === 'replace')
+                          ? newQuestBreakInversions
+                          : undefined,
+                        replacementGoalId: newQuestReplacementGoalId || undefined,
                       } : g));
                       setNotification({ title: "Success", message: "Quest updated!", xp: 0 });
                     } else {
@@ -5508,6 +5632,11 @@ export default function App() {
                         bundleSkipSaveAmount: newQuestBundleSkipSave,
                         earliestCompleteTime: newQuestEarliestTime || undefined,
                         consecutiveMissPenaltyXp: newQuestMissPenaltyXp,
+                        habitKind: newQuestHabitKind,
+                        breakInversions: (newQuestHabitKind === 'break' || newQuestHabitKind === 'replace')
+                          ? newQuestBreakInversions
+                          : undefined,
+                        replacementGoalId: newQuestReplacementGoalId || undefined,
                       };
                       setGoals(prev => [newGoal, ...prev]);
                       setNotification({ title: "Success", message: "New quest created!", xp: 0 });

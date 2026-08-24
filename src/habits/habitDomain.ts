@@ -1,6 +1,6 @@
 import { Goal, GoalDailyProgress, HistoryRecord, Routine, UserStats } from '../types';
 
-export const HABIT_DATA_VERSION = 3;
+export const HABIT_DATA_VERSION = 4;
 
 export const TWO_MINUTE_XP_RATIO = 0.25;
 

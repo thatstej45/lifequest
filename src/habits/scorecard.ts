@@ -1,5 +1,6 @@
 import type { Goal, ScorecardRating } from '../types';
 import { questBaseReward } from '../progression';
+import { defaultBreakInversions } from './breakMode';
 
 export const SCORECARD_RATINGS: ScorecardRating[] = ['+', '-', '='];
 
@@ -13,24 +14,28 @@ export const scorecardSummary = (goals: Goal[]) => {
   };
 };
 
-export const breakQuestFromMinus = (goal: Goal, skillId?: string): Goal => ({
-  id: `break-${goal.id}-${Date.now()}`,
-  skillId: skillId ?? goal.skillId,
-  title: `Break: ${goal.title}`,
-  completed: false,
-  xpReward: questBaseReward('easy', { repeatType: 'daily', isRepeatable: true }),
-  difficulty: 'easy',
-  isRepeatable: true,
-  repeatType: 'daily',
-  trackingMode: 'checkbox',
-  targetValue: 1,
-  unit: 'times',
-  icon: goal.icon ?? 'Ban',
-  note: `Scorecard − habit derived from “${goal.title}”.`,
-  habitKind: 'break',
-  identityStatementIndex: goal.identityStatementIndex,
-  sortOrder: (goal.sortOrder ?? 0) + 1,
-});
+export const breakQuestFromMinus = (goal: Goal, skillId?: string): Goal => {
+  const label = goal.title.replace(/^Break:\s*/i, '');
+  return {
+    id: `break-${goal.id}-${Date.now()}`,
+    skillId: skillId ?? goal.skillId,
+    title: `Break: ${label}`,
+    completed: false,
+    xpReward: questBaseReward('easy', { repeatType: 'daily', isRepeatable: true }),
+    difficulty: 'easy',
+    isRepeatable: true,
+    repeatType: 'daily',
+    trackingMode: 'checkbox',
+    targetValue: 1,
+    unit: 'times',
+    icon: goal.icon ?? 'Ban',
+    note: `Scorecard − habit derived from “${goal.title}”.`,
+    habitKind: 'break',
+    breakInversions: defaultBreakInversions(label),
+    identityStatementIndex: goal.identityStatementIndex,
+    sortOrder: (goal.sortOrder ?? 0) + 1,
+  };
+};
 
 export const replacementQuestFromMinus = (minusGoal: Goal, plusGoal: Goal): Goal => ({
   id: `replace-${minusGoal.id}-${Date.now()}`,

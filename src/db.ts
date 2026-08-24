@@ -193,6 +193,39 @@ export class LifeQuestDatabase extends Dexie {
         }
       });
     });
+    this.version(11).stores({
+      categories: 'id',
+      userStats: 'id',
+      goals: 'id, skillId, routineId, trackingMode, habitKind',
+      routines: 'id, sortOrder',
+      goalDailyProgress: 'id, goalId, date, [goalId+date]',
+      categoryConsistencies: 'categoryId',
+      settings: 'id',
+      history: 'date',
+      questHistory: 'id, goalId, skillId, completedAt',
+      financeIncomes: 'id, date, sourceCategory',
+      financeExpenses: 'id, date, category',
+      financeInvestments: 'id, date, type',
+      financeLending: 'id, personName, returnedStatus',
+      financeInsurance: 'id',
+      financeAssets: 'id',
+      financeTransfers: 'id, date',
+      financeCreditCards: 'id'
+    }).upgrade(async transaction => {
+      await transaction.table('userStats').toCollection().modify(stats => {
+        stats.habitDataVersion = HABIT_DATA_VERSION;
+        stats.quarterlyReviewDecisions ??= {};
+      });
+      await transaction.table('goals').toCollection().modify(goal => {
+        if ((goal.habitKind === 'break' || goal.habitKind === 'replace') && !goal.breakInversions) {
+          const label = String(goal.title ?? '').replace(/^Break:\s*/i, '');
+          goal.breakInversions = {
+            invisible: `Remove the cue for “${label}”.`,
+            difficult: `Add friction before “${label}”.`,
+          };
+        }
+      });
+    });
   }
 }
 

@@ -6,6 +6,15 @@ export type AppearanceDensity = 'compact' | 'cozy' | 'relaxed';
 export type ScorecardRating = '+' | '-' | '=';
 export type HabitKind = 'build' | 'break' | 'replace';
 export type MentorPersonality = 'Supportive' | 'Snarky' | 'Stoic';
+export type QuarterlyReviewDecision = 'keep' | 'change' | 'drop';
+
+/** Inversion of the 4 laws for break-habit mode (make it invisible / unattractive / difficult / unsatisfying). */
+export interface BreakInversions {
+  invisible?: string;
+  unattractive?: string;
+  difficult?: string;
+  unsatisfying?: string;
+}
 
 export interface Perk {
   level: number;
@@ -70,6 +79,14 @@ export interface UserStats {
   recoveryAttempts?: number;
   /** ISO timestamp of last habits scorecard review. */
   scorecardReviewedAt?: string;
+  /** ISO timestamp of last quarterly identity/habit review. */
+  lastQuarterlyReviewAt?: string;
+  /** Per-habit quarterly review decisions keyed by goal id. */
+  quarterlyReviewDecisions?: Record<string, QuarterlyReviewDecision>;
+  /** Optional accountability partner name or handle. */
+  accountabilityPartner?: string;
+  /** Public commitment statement shared with partner. */
+  accountabilityCommitment?: string;
 }
 
 export interface Goal {
@@ -119,6 +136,8 @@ export interface Goal {
   consecutiveMissPenaltyXp?: number;
   /** ISO date when user last dismissed a Goldilocks suggestion for this habit. */
   goldilocksDismissedAt?: string;
+  /** 4-law inversions for break / replace habits. */
+  breakInversions?: BreakInversions;
 }
 
 export interface Routine {
