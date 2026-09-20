@@ -1916,6 +1916,7 @@ export default function App() {
     backend: notificationBackend,
     requestPermission: requestNotificationPermission,
   } = useNotificationPermission();
+  const [webPushActive, setWebPushActive] = useState(false);
   const { updateState, refresh: refreshAppUpdate } = useAppUpdate();
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -2729,7 +2730,13 @@ export default function App() {
         lastReminderRef.current[timeKey] = currentHHmm;
         lastReminderRef.current[dayKey] = currentHHmm;
 
-        if (notificationBackend === 'web' && notificationPermission === 'granted') {
+        // Web Push already delivers this reminder from the server; showing a
+        // local one too would duplicate it in the notification centre.
+        if (
+          notificationBackend === 'web'
+          && notificationPermission === 'granted'
+          && !webPushActive
+        ) {
           void showWebReminder(goal);
         }
       });
@@ -2744,6 +2751,7 @@ export default function App() {
     checkDayChange,
     notificationBackend,
     notificationPermission,
+    webPushActive,
     userStats.pauseMode,
   ]);
 
@@ -2763,8 +2771,12 @@ export default function App() {
       || notificationBackend !== 'web'
       || notificationPermission !== 'granted'
       || !isWebPushConfigured()
-    ) return;
-    void syncWebPushReminders(goals, userStats.pauseMode ?? 'none');
+    ) {
+      setWebPushActive(false);
+      return;
+    }
+    void syncWebPushReminders(goals, userStats.pauseMode ?? 'none')
+      .then(result => setWebPushActive(result.synced));
   }, [goals, isLoaded, notificationBackend, notificationPermission, userStats.pauseMode]);
 
   // Reset repeatable quests daily and apply penalties
@@ -2970,6 +2982,7 @@ export default function App() {
           const webPush = notificationBackend === 'web' && permission === 'granted'
             ? await syncWebPushReminders(goals, userStats.pauseMode ?? 'none')
             : null;
+          setWebPushActive(webPush?.synced === true);
           setNotification({
             title: 'Notifications',
             message: permission === 'granted'
@@ -4337,6 +4350,7 @@ export default function App() {
                                   const webPush = notificationBackend === 'web'
                                     ? await syncWebPushReminders(goals, userStats.pauseMode ?? 'none')
                                     : null;
+                                  setWebPushActive(webPush?.synced === true);
                                   setNotification({
                                     title: 'System Info',
                                     message: webPush?.synced
@@ -4365,7 +4379,8 @@ export default function App() {
                                   if (notificationBackend === 'native') {
                                     await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
                                   } else if (notificationBackend === 'web') {
-                                    await syncWebPushReminders(goals, userStats.pauseMode ?? 'none');
+                                    const webPush = await syncWebPushReminders(goals, userStats.pauseMode ?? 'none');
+                                    setWebPushActive(webPush.synced);
                                   }
                                   setNotification({ title: 'System Info', message: 'Reminders rescheduled', xp: 0 });
                                 }}

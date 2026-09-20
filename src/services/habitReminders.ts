@@ -5,7 +5,6 @@ import {
 } from '@capacitor/local-notifications';
 import type { Goal, GoalDailyProgress } from '../types';
 import {
-  formatImplementationIntention,
   isGoalScheduled,
   isHabitLoggedToday,
   trackingMode,
@@ -157,15 +156,15 @@ export const shouldRemindGoal = (
   return (goal.reminderTimes?.length ?? 0) > 0;
 };
 
-export const reminderBodyForGoal = (goal: Goal) =>
-  formatImplementationIntention(goal) ?? goal.title;
-
 export const reminderTitleForGoal = (goal: Goal) => `Quest: ${goal.title}`;
 
-/** The cue/intention line, omitted when it would just repeat the title. */
+/**
+ * Extra context for the notification body. The quest name and time are already
+ * in the title, so only the location cue is worth repeating.
+ */
 export const reminderDetailForGoal = (goal: Goal) => {
-  const detail = formatImplementationIntention(goal);
-  return detail && detail !== goal.title ? detail : '';
+  const place = goal.cueLocation?.trim();
+  return place ? `In ${place}` : '';
 };
 
 export const REMINDER_TAP_HINT = 'Tap to mark done · Swipe to dismiss';

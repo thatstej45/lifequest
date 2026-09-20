@@ -121,7 +121,16 @@ const sendPush = async (
   return fetch(row.endpoint, init);
 };
 
+const STALE_SUBSCRIPTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 const deliverDueReminders = async (env: Env) => {
+  // A reinstalled web app subscribes again under a new device id, leaving the
+  // previous subscription alive and sending duplicate reminders. Live installs
+  // refresh on every launch, so anything this old is an orphan.
+  await env.DB.prepare('DELETE FROM subscriptions WHERE updated_at < ?')
+    .bind(Date.now() - STALE_SUBSCRIPTION_MS)
+    .run();
+
   const result = await env.DB.prepare(
     `SELECT device_id, endpoint, p256dh, auth, timezone, reminders_json, last_sent_json
      FROM subscriptions
@@ -150,11 +159,13 @@ const deliverDueReminders = async (env: Env) => {
       const key = sentKey(reminder, clock);
       if (lastSent[key]) continue;
 
+      // Clients before the title change sent the quest name as the body.
+      const detail = reminder.body && !reminder.body.includes(reminder.title)
+        ? reminder.body
+        : '';
       const response = await sendPush(env, row, {
         title: `Quest: ${reminder.title}`,
-        // Older clients sent the quest title as the body; drop it so the
-        // notification does not repeat itself.
-        body: reminder.body === reminder.title ? '' : reminder.body,
+        body: detail,
         goalId: reminder.goalId,
       });
       pushes += 1;
