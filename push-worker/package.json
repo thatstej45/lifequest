@@ -1,0 +1,23 @@
+{
+  "name": "lifequest-push-worker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create lifequest-push",
+    "db:migrate:local": "wrangler d1 migrations apply lifequest-push --local",
+    "db:migrate:remote": "wrangler d1 migrations apply lifequest-push --remote",
+    "keys:generate": "node scripts/generate-vapid.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260920.1",
+    "typescript": "~5.8.2",
+    "wrangler": "^4.135.0"
+  }
+}

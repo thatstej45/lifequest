@@ -13,9 +13,6 @@
     "android:open": "cap open android",
     "android:apk": "npm run android:sync && npm run android:assemble",
     "android:assemble": "node scripts/android-assemble.mjs",
-    "ios:sync": "npm run build && cap sync ios",
-    "ios:open": "cap open ios",
-    "ios:build:simulator": "xcodebuild -project ios-native/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build",
     "capacitor:sync:before": "node scripts/ensure-notification-assets.mjs",
     "ota:package": "node scripts/package-ota.mjs"
   },
@@ -23,7 +20,6 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.0",
-    "@capacitor/ios": "^8.5.2",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.1",
     "@capgo/capacitor-updater": "^8.51.14",

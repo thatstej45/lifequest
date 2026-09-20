@@ -7,10 +7,6 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
   },
-  ios: {
-    path: 'ios-native',
-    scheme: 'App',
-  },
   server: {
     androidScheme: 'https',
   },
@@ -23,7 +19,6 @@ const config: CapacitorConfig = {
     LocalNotifications: {
       iconColor: '#2563eb',
       sound: 'lifequest_reminder.wav',
-      presentationOptions: ['badge', 'sound', 'banner', 'list'],
     },
   },
 };

@@ -151,6 +151,13 @@ import {
   showWebReminder,
   syncNativeHabitReminders,
 } from './services/habitReminders';
+import {
+  isIOSDevice,
+  isStandalonePwa,
+  isWebPushConfigured,
+  sendWebPushTest,
+  syncWebPushReminders,
+} from './services/webPush';
 import { MENTOR_PERSONALITIES, normalizeMentorPersonality } from './habits/mentorPersonality';
 
 import { Howl } from 'howler';
@@ -2750,6 +2757,16 @@ export default function App() {
     void syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
   }, [goals, isLoaded, notificationBackend, notificationPermission, userStats.pauseMode]);
 
+  useEffect(() => {
+    if (
+      !isLoaded
+      || notificationBackend !== 'web'
+      || notificationPermission !== 'granted'
+      || !isWebPushConfigured()
+    ) return;
+    void syncWebPushReminders(goals, userStats.pauseMode ?? 'none');
+  }, [goals, isLoaded, notificationBackend, notificationPermission, userStats.pauseMode]);
+
   // Reset repeatable quests daily and apply penalties
   useEffect(() => {
     const checkDailyReset = () => {
@@ -2780,16 +2797,36 @@ export default function App() {
   }, []);
 
   const handleTestSystemNotification = useCallback(async () => {
-    if (notificationBackend !== 'native') {
+    if (notificationBackend === 'web' && isIOSDevice() && !isStandalonePwa()) {
       setNotification({
-        title: 'System notification test',
-        message: 'Install the native Android or iOS app to test system notifications.',
+        title: 'Install LifeQuest first',
+        message: 'In Safari, use Share → Add to Home Screen, then open LifeQuest from its icon.',
         xp: 0,
       });
       return;
     }
 
     try {
+      if (notificationBackend === 'web') {
+        if (!isWebPushConfigured()) {
+          setNotification({
+            title: 'Web Push setup required',
+            message: 'The free push service has not been connected yet.',
+            xp: 0,
+          });
+          return;
+        }
+        const syncResult = await syncWebPushReminders(goals, userStats.pauseMode ?? 'none');
+        if (syncResult.synced === false) throw new Error(`Push sync failed: ${syncResult.reason}`);
+        await sendWebPushTest();
+        setNotification({
+          title: 'Web Push test sent',
+          message: 'A system notification should arrive shortly.',
+          xp: 0,
+        });
+        return;
+      }
+
       const testGoal = goals.find(goal => !goal.completed && trackingMode(goal) !== 'health');
       const result = await scheduleNativeTestNotification(testGoal);
       setNotification({
@@ -2807,7 +2844,7 @@ export default function App() {
         xp: 0,
       });
     }
-  }, [goals, notificationBackend]);
+  }, [goals, notificationBackend, userStats.pauseMode]);
 
 
   if (theme === 'terminal') {
@@ -2918,16 +2955,29 @@ export default function App() {
           playSound(sound);
         }}
         onEnableNotifications={async () => {
+          if (notificationBackend === 'web' && isIOSDevice() && !isStandalonePwa()) {
+            setNotification({
+              title: 'Install LifeQuest first',
+              message: 'In Safari, use Share → Add to Home Screen, then enable notifications from the installed app.',
+              xp: 0,
+            });
+            return;
+          }
           const permission = await requestNotificationPermission();
           if (notificationBackend === 'native' && permission === 'granted') {
             await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
           }
+          const webPush = notificationBackend === 'web' && permission === 'granted'
+            ? await syncWebPushReminders(goals, userStats.pauseMode ?? 'none')
+            : null;
           setNotification({
             title: 'Notifications',
             message: permission === 'granted'
               ? notificationBackend === 'native'
                 ? 'Native reminders enabled'
-                : 'Notifications authorized'
+                : webPush?.synced
+                  ? 'Background Web Push reminders enabled'
+                  : 'Permission allowed; the push service still needs to be connected'
               : permission === 'denied'
                 ? 'Permission blocked — enable in system settings'
                 : `Permission ${permission}`,
@@ -4271,12 +4321,29 @@ export default function App() {
                           {notificationPermission !== 'granted' && notificationPermission !== 'denied' && (
                             <button 
                               onClick={async () => {
+                                if (notificationBackend === 'web' && isIOSDevice() && !isStandalonePwa()) {
+                                  setNotification({
+                                    title: 'Install LifeQuest first',
+                                    message: 'In Safari, use Share → Add to Home Screen, then enable notifications from the installed app.',
+                                    xp: 0,
+                                  });
+                                  return;
+                                }
                                 const res = await requestNotificationPermission();
                                 if (res === 'granted') {
                                   if (notificationBackend === 'native') {
                                     await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
                                   }
-                                  setNotification({ title: "System Info", message: "Notifications Authorized!", xp: 0 });
+                                  const webPush = notificationBackend === 'web'
+                                    ? await syncWebPushReminders(goals, userStats.pauseMode ?? 'none')
+                                    : null;
+                                  setNotification({
+                                    title: 'System Info',
+                                    message: webPush?.synced
+                                      ? 'Background Web Push reminders enabled'
+                                      : 'Notifications authorized',
+                                    xp: 0,
+                                  });
                                 }
                               }}
                               className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
@@ -4286,19 +4353,19 @@ export default function App() {
                           )}
                           {notificationPermission === 'granted' && (
                             <div className="flex gap-2">
-                              {notificationBackend === 'native' && (
-                                <button
-                                  onClick={handleTestSystemNotification}
-                                  className="px-3 py-1.5 bg-violet-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
-                                >
-                                  TEST
-                                </button>
-                              )}
+                              <button
+                                onClick={handleTestSystemNotification}
+                                className="px-3 py-1.5 bg-violet-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
+                              >
+                                TEST
+                              </button>
                               <button
                                 onClick={async () => {
                                   await requestNotificationPermission();
                                   if (notificationBackend === 'native') {
                                     await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
+                                  } else if (notificationBackend === 'web') {
+                                    await syncWebPushReminders(goals, userStats.pauseMode ?? 'none');
                                   }
                                   setNotification({ title: 'System Info', message: 'Reminders rescheduled', xp: 0 });
                                 }}
@@ -4311,7 +4378,9 @@ export default function App() {
                         </div>
                         {notificationBackend === 'web' && notificationPermission === 'granted' && (
                           <p className="text-[9px] text-slate-500 leading-tight">
-                            In-browser reminders fire while the app is open. Install as a PWA for lock-screen alerts.
+                            {isWebPushConfigured()
+                              ? 'Background Web Push is enabled. On iPhone, LifeQuest must be installed from Safari.'
+                              : 'In-app reminders work now; connect the free push service for alerts while LifeQuest is closed.'}
                           </p>
                         )}
                         {notificationBackend === 'native' && notificationPermission === 'granted' && (

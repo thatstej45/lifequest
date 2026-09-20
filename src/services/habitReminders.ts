@@ -182,8 +182,8 @@ export const showWebReminder = async (goal: Goal) => {
           renotify: true,
           data: { goalId: goal.id },
           actions: [
-            { action: 'complete', title: 'Complete ✓' },
-            { action: 'snooze', title: 'Snooze ⏱' },
+            { action: 'dismiss', title: 'Dismiss' },
+            { action: 'done', title: 'Done' },
           ],
         } as NotificationOptions);
         return true;

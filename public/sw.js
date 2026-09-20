@@ -59,17 +59,41 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data?.json() ?? {};
+  } catch {
+    payload = { body: event.data?.text() ?? 'A LifeQuest reminder is ready.' };
+  }
+
+  const goalId = payload.goalId ?? payload.data?.goalId;
+  event.waitUntil(
+    self.registration.showNotification(payload.title ?? 'Quest Reminder', {
+      body: payload.body ?? 'Your quest is ready.',
+      icon: new URL('icon_lightning.png', APP_ROOT).href,
+      badge: new URL('icon_lightning.png', APP_ROOT).href,
+      tag: goalId ? `quest-${goalId}` : 'lifequest-reminder',
+      renotify: true,
+      data: { goalId },
+      actions: [
+        { action: 'dismiss', title: 'Dismiss' },
+        { action: 'done', title: 'Done' },
+      ],
+    })
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   const goalId = event.notification.data?.goalId;
   const action = event.action;
 
   event.notification.close();
 
-  if (action === 'complete' && goalId) {
+  if (action === 'dismiss') return;
+
+  if (action === 'done' && goalId) {
     channel.postMessage({ type: 'COMPLETE_QUEST', goalId });
-  } else if (action === 'snooze' && goalId) {
-    // Snooze logic could be handled by app or just ignored as placeholder
-    channel.postMessage({ type: 'SNOOZE_QUEST', goalId });
   }
 
   event.waitUntil(
@@ -83,7 +107,9 @@ self.addEventListener('notificationclick', (event) => {
         }
         return client.focus();
       }
-      return clients.openWindow(APP_ROOT + (goalId ? '?completeId=' + goalId : ''));
+      const target = new URL(APP_ROOT);
+      if (action === 'done' && goalId) target.searchParams.set('completeId', goalId);
+      return clients.openWindow(target.href);
     })
   );
 });

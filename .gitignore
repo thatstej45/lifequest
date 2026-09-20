@@ -24,8 +24,9 @@ android/app/src/main/res/raw/lifequest_reminder.wav
 *.jks
 mobile-release/
 site/
-# Obsolete partial scaffold; the complete Capacitor project lives at ios-native/.
+# Legacy local iOS scaffolds are not part of the PWA-first project.
 ios/
+ios-native/
 ios/vendor/
 ios/.bundle/
 ios/fastlane/report.xml

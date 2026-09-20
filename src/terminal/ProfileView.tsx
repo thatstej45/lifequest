@@ -334,11 +334,9 @@ export default function ProfileView({
                 <button type="button" className="term-token is-action term-nested-action" onClick={onEnableNotifications}>
                   [reschedule reminders]
                 </button>
-                {notificationBackend === 'native' && (
-                  <button type="button" className="term-token is-action term-nested-action" onClick={onTestSystemNotification}>
-                    [test system notification]
-                  </button>
-                )}
+                <button type="button" className="term-token is-action term-nested-action" onClick={onTestSystemNotification}>
+                  [test system notification]
+                </button>
               </>
             )}
             {notificationPermission === 'denied' && (

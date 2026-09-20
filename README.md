@@ -48,35 +48,28 @@ The app repo is [thatstej45/lifequest](https://github.com/thatstej45/lifequest).
    `https://thatstej45.github.io/lifequest/` is the live app and
    `https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages/update.json` is the Android update channel
 3. Builds a debug APK artifact you can sideload when native code changes
-4. Compiles and uploads an unsigned iOS simulator app to validate the native iOS project
 
 After the APK that includes the live-update plugin is installed once, later UI/logic pushes update the phone automatically the next time the app is opened (or brought back to the foreground). Native changes (new plugins, permissions, icons) still need a fresh APK install.
 
-## Native iPhone app
+## Install on iPhone as a PWA
 
-The native Capacitor project lives in `ios-native/`. Native iOS is required for
-reliable scheduled quest reminders while LifeQuest is backgrounded or closed;
-the home-screen web app cannot provide that behavior without a remote Web Push
-service.
+LifeQuest uses the Home Screen PWA path on iPhone, with no Apple Developer
+membership or seven-day expiry:
 
-1. `npm install`
-2. `npm run ios:sync`
-3. `npm run ios:open`
-4. Select an Apple development team and a physical iPhone in Xcode, then Run
+1. Use iOS/iPadOS 16.4 or newer.
+2. Open `https://thatstej45.github.io/lifequest/` in Safari.
+3. Tap **Share → Add to Home Screen → Add**.
+4. Launch LifeQuest from its new Home Screen icon, not from a Safari tab.
+5. Open Profile/Settings and tap **Enable notifications**.
+6. Tap **Test** and background or lock the phone.
 
-Quest reminders are scheduled on-device, so they do not require a push server.
-iOS delivers them to Notification Center even when the app is not running.
-TestFlight/App Store distribution still requires Apple signing credentials and
-an App Store Connect app for bundle ID `com.lifequest.app`.
+Apple supports standards-based Web Push for installed Home Screen apps. It does
+not require an Apple Developer account, but background reminders do require a
+server to send each push. This repository includes a Cloudflare Worker + D1
+scheduler in `push-worker/`; both services have free tiers. Follow
+`push-worker/README.md` for the one-time deployment.
 
-Every push to `main` also builds the iOS app for the simulator in CI. That
-unsigned simulator artifact validates the native project but cannot be installed
-on a physical iPhone.
-
-## Optional iPhone home-screen web app
-
-The web app can still be installed from Safari via **Share → Add to Home
-Screen**. It runs full-screen and offline, but use the native app when reliable
-background notifications are required.
+Without the push worker, reminders still appear while LifeQuest is open, but
+iOS cannot wake a closed PWA at a future local time by itself.
 
 Repo **Settings → Pages** must be set to deploy from the `gh-pages` branch (root) for this URL to work. The build uses relative asset paths, so it runs from the `/lifequest/` project path as well as a custom domain.
