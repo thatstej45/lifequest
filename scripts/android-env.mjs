@@ -31,7 +31,7 @@ export function resolveJavaHome() {
     const fromTool = execFileSync('/usr/libexec/java_home', ['-v', '21'], {
       encoding: 'utf8',
     }).trim();
-    if (fromTool && existsSync(join(fromTool, 'bin/java'))) return fromTool;
+    if (fromTool && existsSync(join(fromTool, 'bin/java')) && isJava21(fromTool)) return fromTool;
   } catch {
     // Fall through to known install paths.
   }

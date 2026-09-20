@@ -43,7 +43,15 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
   if (isNativeApp) {
     try {
       const status = await LocalNotifications.requestPermissions();
-      if (status.display === 'granted') return 'granted';
+      if (status.display === 'granted') {
+        if (Capacitor.getPlatform() === 'android') {
+          const exact = await LocalNotifications.checkExactNotificationSetting().catch(() => null);
+          if (exact?.exact_alarm !== 'granted') {
+            await LocalNotifications.changeExactNotificationSetting().catch(() => undefined);
+          }
+        }
+        return 'granted';
+      }
       if (status.display === 'denied') return 'denied';
       return 'default';
     } catch {
@@ -90,26 +98,36 @@ export const shouldRemindGoal = (
 export const reminderBodyForGoal = (goal: Goal) =>
   formatImplementationIntention(goal) ?? goal.title;
 
+export const dueReminderTimes = (goal: Goal, now = new Date()) => {
+  const currentHHmm = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  return (goal.reminderTimes ?? [])
+    .map(normalizeReminderTime)
+    .filter((value): value is string => value === currentHHmm);
+};
+
 export const showWebReminder = async (goal: Goal) => {
   if (!('Notification' in window) || Notification.permission !== 'granted') return false;
   const body = reminderBodyForGoal(goal);
+  const icon = new URL('favicon.ico', document.baseURI).href;
   try {
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready;
-      await registration.showNotification('Quest Reminder', {
-        body,
-        icon: '/favicon.ico',
-        tag: `quest-${goal.id}`,
-        renotify: true,
-        data: { goalId: goal.id },
-        actions: [
-          { action: 'complete', title: 'Complete ✓' },
-          { action: 'snooze', title: 'Snooze ⏱' },
-        ],
-      } as NotificationOptions);
-      return true;
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        await registration.showNotification('Quest Reminder', {
+          body,
+          icon,
+          tag: `quest-${goal.id}`,
+          renotify: true,
+          data: { goalId: goal.id },
+          actions: [
+            { action: 'complete', title: 'Complete ✓' },
+            { action: 'snooze', title: 'Snooze ⏱' },
+          ],
+        } as NotificationOptions);
+        return true;
+      }
     }
-    new Notification('Quest Reminder', { body, icon: '/favicon.ico' });
+    new Notification('Quest Reminder', { body, icon });
     return true;
   } catch (error) {
     console.error('Web notification error:', error);
@@ -117,10 +135,18 @@ export const showWebReminder = async (goal: Goal) => {
   }
 };
 
-const buildNativeSchedules = (goal: Goal) => {
-  const times = (goal.reminderTimes ?? [])
+export const buildNativeSchedules = (
+  goal: Goal,
+  now = new Date(),
+  exactAlarmGranted = true,
+) => {
+  const normalizedTimes = (goal.reminderTimes ?? [])
     .map(normalizeReminderTime)
-    .filter((value): value is string => Boolean(value));
+    .filter((value): value is string => Boolean(value))
+    .sort();
+  const times = goal.reminderFrequency === 'once'
+    ? normalizedTimes.slice(0, 1)
+    : normalizedTimes;
   if (times.length === 0) return [];
 
   const isDaily = goal.repeatType === 'daily' || (goal.isRepeatable && goal.repeatType !== 'weekly');
@@ -133,7 +159,15 @@ const buildNativeSchedules = (goal: Goal) => {
     id: number;
     title: string;
     body: string;
-    schedule: { on: { hour: number; minute: number; weekday?: number }; repeats: boolean; allowWhileIdle?: boolean };
+    sound: string;
+    foreground: boolean;
+    isExactNotification: boolean;
+    schedule: {
+      at?: Date;
+      on?: { hour: number; minute: number; weekday?: number };
+      repeats: boolean;
+      allowWhileIdle?: boolean;
+    };
     extra: { goalId: string };
   }> = [];
 
@@ -149,6 +183,9 @@ const buildNativeSchedules = (goal: Goal) => {
           id: notificationId(goal.id, index * 10 + weekdayIndex),
           title: 'Quest Reminder',
           body,
+          sound: 'default',
+          foreground: true,
+          isExactNotification: exactAlarmGranted,
           schedule: {
             on: { weekday: day + 1, hour, minute },
             repeats: true,
@@ -160,13 +197,37 @@ const buildNativeSchedules = (goal: Goal) => {
       return;
     }
 
+    if (isOneTime) {
+      const at = new Date(now);
+      at.setHours(hour, minute, 0, 0);
+      if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
+      schedules.push({
+        id: notificationId(goal.id, index),
+        title: 'Quest Reminder',
+        body,
+        sound: 'default',
+        foreground: true,
+        isExactNotification: exactAlarmGranted,
+        schedule: {
+          at,
+          repeats: false,
+          allowWhileIdle: true,
+        },
+        extra: { goalId: goal.id },
+      });
+      return;
+    }
+
     schedules.push({
       id: notificationId(goal.id, index),
       title: 'Quest Reminder',
       body,
+      sound: 'default',
+      foreground: true,
+      isExactNotification: exactAlarmGranted,
       schedule: {
         on: { hour, minute },
-        repeats: isDaily,
+        repeats: true,
         allowWhileIdle: true,
       },
       extra: { goalId: goal.id },
@@ -193,11 +254,13 @@ export const syncNativeHabitReminders = async (
     return { scheduled: 0, skipped: 'permission' as const };
   }
 
+  const exactAlarmGranted = Capacitor.getPlatform() !== 'android'
+    || (await LocalNotifications.checkExactNotificationSetting().catch(() => ({ exact_alarm: 'denied' as const }))).exact_alarm === 'granted';
   const pending = goals.flatMap(goal => {
     if (pauseMode !== 'none') return [];
     if (trackingMode(goal) === 'health') return [];
     if (goal.completed && (!goal.repeatType || goal.repeatType === 'none') && !goal.isRepeatable) return [];
-    return buildNativeSchedules(goal);
+    return buildNativeSchedules(goal, new Date(), exactAlarmGranted);
   });
 
   const existing = await LocalNotifications.getPending().catch(() => ({ notifications: [] }));
@@ -208,8 +271,18 @@ export const syncNativeHabitReminders = async (
   }
   if (pending.length === 0) return { scheduled: 0, skipped: null };
 
-  await LocalNotifications.schedule({ notifications: pending });
-  return { scheduled: pending.length, skipped: null };
+  try {
+    const result = await LocalNotifications.schedule({ notifications: pending });
+    return {
+      scheduled: pending.length,
+      skipped: null,
+      exactAlarmGranted,
+      warning: result.warning?.message,
+    };
+  } catch (error) {
+    console.error('Native notification scheduling error:', error);
+    return { scheduled: 0, skipped: 'error' as const, exactAlarmGranted };
+  }
 };
 
 export const registerNativeNotificationHandlers = () => {

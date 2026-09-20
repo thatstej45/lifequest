@@ -18,6 +18,7 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       iconColor: '#2563eb',
+      presentationOptions: ['badge', 'sound', 'banner', 'list'],
     },
   },
 };
