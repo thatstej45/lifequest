@@ -10,12 +10,12 @@
     {
       "binding": "DB",
       "database_name": "lifequest-push",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+      "database_id": "e1b0f91a-1482-47b0-a86b-47c213295a0f"
     }
   ],
   "vars": {
     "APP_ORIGIN": "https://thatstej45.github.io",
     "VAPID_SUBJECT": "https://thatstej45.github.io/lifequest/",
-    "VAPID_PUBLIC_KEY": "REPLACE_WITH_VAPID_PUBLIC_KEY"
+    "VAPID_PUBLIC_KEY": "BD647wlNNCNWQb2JWPRzGBBK54KRPCeLtoZFycw0jcYtzKhCSouoGo5T45-1jFwdxSag1sWNRiJGqz9jFSOANCo"
   }
 }
