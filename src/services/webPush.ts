@@ -1,5 +1,6 @@
 import type { Goal } from '../types';
-import { formatImplementationIntention, trackingMode } from '../habits/habitDomain';
+import { trackingMode } from '../habits/habitDomain';
+import { reminderDetailForGoal } from './habitReminders';
 
 const DEVICE_ID_KEY = 'lifequest_push_device_id';
 const PUSH_API_URL = (import.meta.env.VITE_PUSH_API_URL as string | undefined)?.replace(/\/+$/, '') ?? '';
@@ -75,7 +76,7 @@ const buildPushReminders = (goals: Goal[], pauseMode: 'none' | 'vacation' | 'sic
       return {
         goalId: goal.id,
         title: goal.title,
-        body: formatImplementationIntention(goal) ?? goal.title,
+        body: reminderDetailForGoal(goal),
         time,
         kind,
         weekdays: goal.repeatDays ?? [],

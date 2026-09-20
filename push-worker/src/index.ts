@@ -151,8 +151,10 @@ const deliverDueReminders = async (env: Env) => {
       if (lastSent[key]) continue;
 
       const response = await sendPush(env, row, {
-        title: 'Quest Reminder',
-        body: reminder.body || reminder.title,
+        title: `Quest: ${reminder.title}`,
+        // Older clients sent the quest title as the body; drop it so the
+        // notification does not repeat itself.
+        body: reminder.body === reminder.title ? '' : reminder.body,
         goalId: reminder.goalId,
       });
       pushes += 1;

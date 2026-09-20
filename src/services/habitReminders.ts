@@ -160,6 +160,16 @@ export const shouldRemindGoal = (
 export const reminderBodyForGoal = (goal: Goal) =>
   formatImplementationIntention(goal) ?? goal.title;
 
+export const reminderTitleForGoal = (goal: Goal) => `Quest: ${goal.title}`;
+
+/** The cue/intention line, omitted when it would just repeat the title. */
+export const reminderDetailForGoal = (goal: Goal) => {
+  const detail = formatImplementationIntention(goal);
+  return detail && detail !== goal.title ? detail : '';
+};
+
+export const REMINDER_TAP_HINT = 'Tap to mark done · Swipe to dismiss';
+
 export const dueReminderTimes = (goal: Goal, now = new Date()) => {
   const currentHHmm = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   return (goal.reminderTimes ?? [])
@@ -170,14 +180,17 @@ export const dueReminderTimes = (goal: Goal, now = new Date()) => {
 export const showWebReminder = async (goal: Goal) => {
   if (!('Notification' in window) || Notification.permission !== 'granted') return false;
   const isWebKit = /AppleWebKit/i.test(navigator.userAgent);
-  const reminderBody = reminderBodyForGoal(goal);
-  const body = isWebKit ? `${reminderBody}\nTap to mark done · Swipe to dismiss` : reminderBody;
+  const title = reminderTitleForGoal(goal);
+  const detail = reminderDetailForGoal(goal);
+  const body = [detail, isWebKit ? REMINDER_TAP_HINT : '']
+    .filter(Boolean)
+    .join('\n') || 'Your quest is ready.';
   const icon = new URL('icon-lightning-192.png', document.baseURI).href;
   try {
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
-        await registration.showNotification('Quest Reminder', {
+        await registration.showNotification(title, {
           body,
           icon,
           tag: `quest-${goal.id}`,
@@ -192,7 +205,7 @@ export const showWebReminder = async (goal: Goal) => {
         return true;
       }
     }
-    new Notification('Quest Reminder', { body, icon });
+    new Notification(title, { body, icon });
     return true;
   } catch (error) {
     console.error('Web notification error:', error);
@@ -226,13 +239,14 @@ export const buildNativeSchedules = (
     const [hourPart, minutePart] = time.split(':');
     const hour = Number.parseInt(hourPart, 10);
     const minute = Number.parseInt(minutePart, 10);
-    const body = reminderBodyForGoal(goal);
+    const title = reminderTitleForGoal(goal);
+    const body = reminderDetailForGoal(goal) || 'Your quest is ready.';
 
     if (isWeekly) {
       (goal.repeatDays ?? []).forEach((day, weekdayIndex) => {
         schedules.push({
           id: notificationId(goal.id, index * 10 + weekdayIndex),
-          title: 'Quest Reminder',
+          title,
           body,
           sound: 'default',
           foreground: true,
@@ -258,7 +272,7 @@ export const buildNativeSchedules = (
       if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
       schedules.push({
         id: notificationId(goal.id, index),
-        title: 'Quest Reminder',
+        title,
         body,
         sound: 'default',
         foreground: true,
@@ -279,7 +293,7 @@ export const buildNativeSchedules = (
 
     schedules.push({
       id: notificationId(goal.id, index),
-      title: 'Quest Reminder',
+      title,
       body,
       sound: 'default',
       foreground: true,

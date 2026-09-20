@@ -70,10 +70,13 @@ self.addEventListener('push', (event) => {
   const goalId = payload.goalId ?? payload.data?.goalId;
   const webKitNotification = /AppleWebKit/i.test(self.navigator.userAgent);
   const tapCompletes = Boolean(goalId && webKitNotification);
-  const baseBody = payload.body ?? 'Your quest is ready.';
+  const detail = (payload.body ?? '').trim();
+  const body = [detail, tapCompletes ? 'Tap to mark done · Swipe to dismiss' : '']
+    .filter(Boolean)
+    .join('\n') || 'Your quest is ready.';
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? 'Quest Reminder', {
-      body: tapCompletes ? `${baseBody}\nTap to mark done · Swipe to dismiss` : baseBody,
+    self.registration.showNotification(payload.title ?? 'Quest reminder', {
+      body,
       icon: new URL('icon-lightning-192.png', APP_ROOT).href,
       badge: new URL('icon-lightning-192.png', APP_ROOT).href,
       tag: goalId ? `quest-${goalId}` : 'lifequest-reminder',

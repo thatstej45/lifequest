@@ -2720,8 +2720,8 @@ export default function App() {
         if (lastReminderRef.current[timeKey] === currentHHmm) return;
 
         setNotification({
-          title: 'Quest Reminder',
-          message: formatImplementationIntention(goal) ?? goal.title,
+          title: `Quest: ${goal.title}`,
+          message: formatImplementationIntention(goal) ?? 'Your quest is ready.',
           xp: 0,
         });
         playSound('notification');
