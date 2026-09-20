@@ -169,8 +169,10 @@ export const dueReminderTimes = (goal: Goal, now = new Date()) => {
 
 export const showWebReminder = async (goal: Goal) => {
   if (!('Notification' in window) || Notification.permission !== 'granted') return false;
-  const body = reminderBodyForGoal(goal);
-  const icon = new URL('favicon.ico', document.baseURI).href;
+  const isWebKit = /AppleWebKit/i.test(navigator.userAgent);
+  const reminderBody = reminderBodyForGoal(goal);
+  const body = isWebKit ? `${reminderBody}\nTap to mark done · Swipe to dismiss` : reminderBody;
+  const icon = new URL('icon-lightning-192.png', document.baseURI).href;
   try {
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.getRegistration();
@@ -180,7 +182,8 @@ export const showWebReminder = async (goal: Goal) => {
           icon,
           tag: `quest-${goal.id}`,
           renotify: true,
-          data: { goalId: goal.id },
+          silent: false,
+          data: { goalId: goal.id, tapCompletes: isWebKit },
           actions: [
             { action: 'dismiss', title: 'Dismiss' },
             { action: 'done', title: 'Done' },

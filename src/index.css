@@ -568,6 +568,33 @@ button[type="submit"] *,
 /* ==========================================================================
    Base Layer & Scrollbar Support
    ========================================================================== */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+/* iOS otherwise lets a fixed dialog rubber-band sideways with the page. */
+.fixed.inset-0:not(.pointer-events-none) {
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
+.fixed.inset-0:not(.pointer-events-none) > * {
+  max-width: 100%;
+}
+
 @layer base {
   body {
     background: #e5ecf6;

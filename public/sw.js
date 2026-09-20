@@ -68,18 +68,22 @@ self.addEventListener('push', (event) => {
   }
 
   const goalId = payload.goalId ?? payload.data?.goalId;
+  const webKitNotification = /AppleWebKit/i.test(self.navigator.userAgent);
+  const tapCompletes = Boolean(goalId && webKitNotification);
+  const baseBody = payload.body ?? 'Your quest is ready.';
   event.waitUntil(
     self.registration.showNotification(payload.title ?? 'Quest Reminder', {
-      body: payload.body ?? 'Your quest is ready.',
-      icon: new URL('icon_lightning.png', APP_ROOT).href,
-      badge: new URL('icon_lightning.png', APP_ROOT).href,
+      body: tapCompletes ? `${baseBody}\nTap to mark done · Swipe to dismiss` : baseBody,
+      icon: new URL('icon-lightning-192.png', APP_ROOT).href,
+      badge: new URL('icon-lightning-192.png', APP_ROOT).href,
       tag: goalId ? `quest-${goalId}` : 'lifequest-reminder',
       renotify: true,
-      data: { goalId },
-      actions: [
+      silent: false,
+      data: { goalId, tapCompletes },
+      actions: goalId ? [
         { action: 'dismiss', title: 'Dismiss' },
         { action: 'done', title: 'Done' },
-      ],
+      ] : [],
     })
   );
 });
@@ -87,12 +91,15 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   const goalId = event.notification.data?.goalId;
   const action = event.action;
+  const completesGoal = Boolean(
+    goalId && (action === 'done' || (!action && event.notification.data?.tapCompletes)),
+  );
 
   event.notification.close();
 
   if (action === 'dismiss') return;
 
-  if (action === 'done' && goalId) {
+  if (completesGoal) {
     channel.postMessage({ type: 'COMPLETE_QUEST', goalId });
   }
 
@@ -108,7 +115,7 @@ self.addEventListener('notificationclick', (event) => {
         return client.focus();
       }
       const target = new URL(APP_ROOT);
-      if (action === 'done' && goalId) target.searchParams.set('completeId', goalId);
+      if (completesGoal) target.searchParams.set('completeId', goalId);
       return clients.openWindow(target.href);
     })
   );
