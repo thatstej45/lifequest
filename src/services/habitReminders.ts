@@ -1,5 +1,8 @@
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications } from '@capacitor/local-notifications';
+import {
+  LocalNotifications,
+  type LocalNotificationSchema,
+} from '@capacitor/local-notifications';
 import type { Goal, GoalDailyProgress } from '../types';
 import {
   formatImplementationIntention,
@@ -12,6 +15,64 @@ import { isNativeApp } from '../platform';
 export type NotificationPermissionState = 'granted' | 'denied' | 'default' | 'unsupported';
 
 export type NotificationBackend = 'web' | 'native' | 'none';
+
+export const QUEST_REMINDER_CHANNEL_ID = 'lifequest-reminders-v2';
+export const QUEST_REMINDER_ACTION_TYPE = 'lifequest-quest-reminder';
+export const QUEST_REMINDER_DISMISS_ACTION = 'dismiss';
+export const QUEST_REMINDER_DONE_ACTION = 'done';
+
+let nativeInfrastructurePromise: Promise<void> | null = null;
+
+/**
+ * Register the OS-visible notification channel and action buttons before any
+ * reminders are scheduled. Android channels are user-configurable and are what
+ * make LifeQuest appear in the system notification settings.
+ */
+export const ensureNativeNotificationInfrastructure = async () => {
+  if (!isNativeApp) return;
+  if (nativeInfrastructurePromise) return nativeInfrastructurePromise;
+
+  nativeInfrastructurePromise = (async () => {
+    await LocalNotifications.registerActionTypes({
+      types: [{
+        id: QUEST_REMINDER_ACTION_TYPE,
+        iosCustomDismissAction: true,
+        actions: [
+          {
+            id: QUEST_REMINDER_DISMISS_ACTION,
+            title: 'Dismiss',
+            destructive: true,
+            foreground: false,
+          },
+          {
+            id: QUEST_REMINDER_DONE_ACTION,
+            title: 'Done',
+            foreground: false,
+          },
+        ],
+      }],
+    });
+
+    if (Capacitor.getPlatform() === 'android') {
+      await LocalNotifications.createChannel({
+        id: QUEST_REMINDER_CHANNEL_ID,
+        name: 'Quest reminders',
+        description: 'Scheduled reminders for your LifeQuest habits and quests',
+        sound: 'lifequest_reminder.wav',
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+        lights: true,
+        lightColor: '#2563EB',
+      });
+    }
+  })().catch(error => {
+    nativeInfrastructurePromise = null;
+    throw error;
+  });
+
+  return nativeInfrastructurePromise;
+};
 
 export const getNotificationBackend = (): NotificationBackend => {
   if (isNativeApp) return 'native';
@@ -42,6 +103,7 @@ export const readNativePermission = async (): Promise<NotificationPermissionStat
 export const requestNotificationPermission = async (): Promise<NotificationPermissionState> => {
   if (isNativeApp) {
     try {
+      await ensureNativeNotificationInfrastructure();
       const status = await LocalNotifications.requestPermissions();
       if (status.display === 'granted') {
         if (Capacitor.getPlatform() === 'android') {
@@ -155,21 +217,7 @@ export const buildNativeSchedules = (
 
   if (!isDaily && !isWeekly && !isOneTime) return [];
 
-  const schedules: Array<{
-    id: number;
-    title: string;
-    body: string;
-    sound: string;
-    foreground: boolean;
-    isExactNotification: boolean;
-    schedule: {
-      at?: Date;
-      on?: { hour: number; minute: number; weekday?: number };
-      repeats: boolean;
-      allowWhileIdle?: boolean;
-    };
-    extra: { goalId: string };
-  }> = [];
+  const schedules: LocalNotificationSchema[] = [];
 
   times.forEach((time, index) => {
     const [hourPart, minutePart] = time.split(':');
@@ -185,6 +233,10 @@ export const buildNativeSchedules = (
           body,
           sound: 'default',
           foreground: true,
+          interruptionLevel: 'active',
+          actionTypeId: QUEST_REMINDER_ACTION_TYPE,
+          channelId: QUEST_REMINDER_CHANNEL_ID,
+          autoCancel: true,
           isExactNotification: exactAlarmGranted,
           schedule: {
             on: { weekday: day + 1, hour, minute },
@@ -207,6 +259,10 @@ export const buildNativeSchedules = (
         body,
         sound: 'default',
         foreground: true,
+        interruptionLevel: 'active',
+        actionTypeId: QUEST_REMINDER_ACTION_TYPE,
+        channelId: QUEST_REMINDER_CHANNEL_ID,
+        autoCancel: true,
         isExactNotification: exactAlarmGranted,
         schedule: {
           at,
@@ -224,6 +280,10 @@ export const buildNativeSchedules = (
       body,
       sound: 'default',
       foreground: true,
+      interruptionLevel: 'active',
+      actionTypeId: QUEST_REMINDER_ACTION_TYPE,
+      channelId: QUEST_REMINDER_CHANNEL_ID,
+      autoCancel: true,
       isExactNotification: exactAlarmGranted,
       schedule: {
         on: { hour, minute },
@@ -242,6 +302,13 @@ export const syncNativeHabitReminders = async (
   pauseMode: 'none' | 'vacation' | 'sick' = 'none',
 ) => {
   if (!isNativeApp) return { scheduled: 0, skipped: 'web' as const };
+
+  try {
+    await ensureNativeNotificationInfrastructure();
+  } catch (error) {
+    console.error('Native notification setup error:', error);
+    return { scheduled: 0, skipped: 'setup-error' as const };
+  }
 
   const permission = await readNativePermission();
   if (permission !== 'granted') {
@@ -262,6 +329,8 @@ export const syncNativeHabitReminders = async (
     if (goal.completed && (!goal.repeatType || goal.repeatType === 'none') && !goal.isRepeatable) return [];
     return buildNativeSchedules(goal, new Date(), exactAlarmGranted);
   });
+  // iOS accepts at most 64 pending local notifications per app.
+  const platformPending = Capacitor.getPlatform() === 'ios' ? pending.slice(0, 64) : pending;
 
   const existing = await LocalNotifications.getPending().catch(() => ({ notifications: [] }));
   if (existing.notifications.length > 0) {
@@ -269,12 +338,12 @@ export const syncNativeHabitReminders = async (
       notifications: existing.notifications.map(item => ({ id: item.id })),
     }).catch(() => undefined);
   }
-  if (pending.length === 0) return { scheduled: 0, skipped: null };
+  if (platformPending.length === 0) return { scheduled: 0, skipped: null };
 
   try {
-    const result = await LocalNotifications.schedule({ notifications: pending });
+    const result = await LocalNotifications.schedule({ notifications: platformPending });
     return {
-      scheduled: pending.length,
+      scheduled: platformPending.length,
       skipped: null,
       exactAlarmGranted,
       warning: result.warning?.message,
@@ -285,19 +354,60 @@ export const syncNativeHabitReminders = async (
   }
 };
 
-export const registerNativeNotificationHandlers = () => {
+export const scheduleNativeTestNotification = async (goal?: Goal) => {
+  if (!isNativeApp) return { scheduled: false, reason: 'web' as const };
+  await ensureNativeNotificationInfrastructure();
+
+  const permission = await LocalNotifications.requestPermissions();
+  if (permission.display !== 'granted') {
+    return { scheduled: false, reason: 'permission' as const };
+  }
+
+  const at = new Date(Date.now() + 5000);
+  await LocalNotifications.schedule({
+    notifications: [{
+      id: notificationId('lifequest-system-test', 0),
+      title: 'LifeQuest notification test',
+      body: goal ? `Ready to complete: ${goal.title}` : 'System notifications are working.',
+      sound: 'default',
+      foreground: true,
+      interruptionLevel: 'active',
+      actionTypeId: QUEST_REMINDER_ACTION_TYPE,
+      channelId: QUEST_REMINDER_CHANNEL_ID,
+      autoCancel: true,
+      isExactNotification: false,
+      schedule: { at, repeats: false, allowWhileIdle: true },
+      extra: goal ? { goalId: goal.id } : {},
+    }],
+  });
+  return { scheduled: true, reason: null };
+};
+
+export const registerNativeNotificationHandlers = (
+  onDone: (goalId: string) => void,
+) => {
   if (!isNativeApp) return () => undefined;
 
-  const completeListener = LocalNotifications.addListener('localNotificationActionPerformed', event => {
+  void ensureNativeNotificationInfrastructure().catch(error => {
+    console.error('Native notification setup error:', error);
+  });
+
+  const actionListener = LocalNotifications.addListener('localNotificationActionPerformed', event => {
     const goalId = event.notification.extra?.goalId as string | undefined;
-    if (goalId) {
-      const channel = new BroadcastChannel('lifequest_channel');
-      channel.postMessage({ type: 'COMPLETE_QUEST', goalId });
-      channel.close();
+    if (event.actionId === QUEST_REMINDER_DONE_ACTION && goalId) {
+      onDone(goalId);
+    }
+    if (
+      event.actionId === QUEST_REMINDER_DONE_ACTION
+      || event.actionId === QUEST_REMINDER_DISMISS_ACTION
+    ) {
+      void LocalNotifications.removeDeliveredNotificationsById({
+        ids: [event.notification.id],
+      }).catch(() => undefined);
     }
   });
 
   return () => {
-    void completeListener.then(listener => listener.remove());
+    void actionListener.then(listener => listener.remove());
   };
 };

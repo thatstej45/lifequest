@@ -27,6 +27,7 @@ interface ProfileViewProps {
   onInstall: () => void;
   canInstall: boolean;
   onTestSound: () => void;
+  onTestSystemNotification: () => void;
   routines: Routine[];
   goals: Goal[];
   history: HistoryRecord[];
@@ -55,6 +56,7 @@ export default function ProfileView({
   onInstall,
   canInstall,
   onTestSound,
+  onTestSystemNotification,
   routines,
   goals,
   history,
@@ -328,12 +330,19 @@ export default function ProfileView({
               </button>
             )}
             {notificationPermission === 'granted' && (
-              <button type="button" className="term-token is-action term-nested-action" onClick={onEnableNotifications}>
-                [reschedule reminders]
-              </button>
+              <>
+                <button type="button" className="term-token is-action term-nested-action" onClick={onEnableNotifications}>
+                  [reschedule reminders]
+                </button>
+                {notificationBackend === 'native' && (
+                  <button type="button" className="term-token is-action term-nested-action" onClick={onTestSystemNotification}>
+                    [test system notification]
+                  </button>
+                )}
+              </>
             )}
             {notificationPermission === 'denied' && (
-              <p className="term-comment is-nested">{`// blocked — enable in ${notificationBackend === 'native' ? 'android settings' : 'browser settings'}`}</p>
+              <p className="term-comment is-nested">{`// blocked — enable in ${notificationBackend === 'native' ? 'system notification settings' : 'browser settings'}`}</p>
             )}
           </>
         )}

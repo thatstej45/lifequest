@@ -146,6 +146,7 @@ import { formatVersionLabel } from './liveUpdate';
 import {
   dueReminderTimes,
   registerNativeNotificationHandlers,
+  scheduleNativeTestNotification,
   shouldRemindGoal,
   showWebReminder,
   syncNativeHabitReminders,
@@ -2741,8 +2742,8 @@ export default function App() {
 
   useEffect(() => {
     if (!isLoaded) return undefined;
-    return registerNativeNotificationHandlers();
-  }, [isLoaded]);
+    return registerNativeNotificationHandlers(completeHabitFromExternalAction);
+  }, [completeHabitFromExternalAction, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || notificationBackend !== 'native') return;
@@ -2777,6 +2778,36 @@ export default function App() {
     const interval = setInterval(checkDailyReset, 1000 * 60 * 60); // Check every hour
     return () => clearInterval(interval);
   }, []);
+
+  const handleTestSystemNotification = useCallback(async () => {
+    if (notificationBackend !== 'native') {
+      setNotification({
+        title: 'System notification test',
+        message: 'Install the native Android or iOS app to test system notifications.',
+        xp: 0,
+      });
+      return;
+    }
+
+    try {
+      const testGoal = goals.find(goal => !goal.completed && trackingMode(goal) !== 'health');
+      const result = await scheduleNativeTestNotification(testGoal);
+      setNotification({
+        title: 'System notification test',
+        message: result.scheduled
+          ? 'Scheduled for 5 seconds from now — background LifeQuest to verify it.'
+          : 'Permission is blocked. Enable LifeQuest notifications in system settings.',
+        xp: 0,
+      });
+    } catch (error) {
+      console.error('System notification test failed:', error);
+      setNotification({
+        title: 'System notification test',
+        message: 'Could not schedule the test notification.',
+        xp: 0,
+      });
+    }
+  }, [goals, notificationBackend]);
 
 
   if (theme === 'terminal') {
@@ -2911,6 +2942,7 @@ export default function App() {
           playSound('questComplete');
           setNotification({ title: 'Audio test', message: 'Sound is working', xp: 0 });
         }}
+        onTestSystemNotification={handleTestSystemNotification}
         notification={notification}
       />
     );
@@ -4230,7 +4262,7 @@ export default function App() {
                             <div className="flex flex-col">
                               <p className="text-sm font-medium">Status</p>
                               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                                {notificationBackend === 'native' ? 'Android native · ' : 'Browser · '}
+                                {notificationBackend === 'native' ? 'Native app · ' : 'Browser · '}
                                 {notificationPermission === 'granted' ? 'Authorized' :
                                  notificationPermission === 'denied' ? 'Blocked' : 'Permission required'}
                               </p>
@@ -4253,18 +4285,28 @@ export default function App() {
                             </button>
                           )}
                           {notificationPermission === 'granted' && (
-                            <button
-                              onClick={async () => {
-                                await requestNotificationPermission();
-                                if (notificationBackend === 'native') {
-                                  await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
-                                }
-                                setNotification({ title: 'System Info', message: 'Reminders rescheduled', xp: 0 });
-                              }}
-                              className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
-                            >
-                              RESCHEDULE
-                            </button>
+                            <div className="flex gap-2">
+                              {notificationBackend === 'native' && (
+                                <button
+                                  onClick={handleTestSystemNotification}
+                                  className="px-3 py-1.5 bg-violet-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
+                                >
+                                  TEST
+                                </button>
+                              )}
+                              <button
+                                onClick={async () => {
+                                  await requestNotificationPermission();
+                                  if (notificationBackend === 'native') {
+                                    await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
+                                  }
+                                  setNotification({ title: 'System Info', message: 'Reminders rescheduled', xp: 0 });
+                                }}
+                                className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
+                              >
+                                RESCHEDULE
+                              </button>
+                            </div>
                           )}
                         </div>
                         {notificationBackend === 'web' && notificationPermission === 'granted' && (
@@ -4279,7 +4321,7 @@ export default function App() {
                         )}
                         {notificationPermission === 'denied' && (
                           <p className="text-[9px] text-red-500/90 leading-tight">
-                            Blocked — enable in {notificationBackend === 'native' ? 'Android app settings' : 'browser site settings'}.
+                            Blocked — enable in {notificationBackend === 'native' ? 'the app’s system notification settings' : 'browser site settings'}.
                           </p>
                         )}
                         </div>
@@ -5180,7 +5222,7 @@ export default function App() {
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="w-full max-w-sm bg-[#0f0f12] border border-gray-800 rounded-[2.5rem] flex flex-col shadow-2xl m-auto overflow-visible"
+                className="w-full max-w-sm bg-[#0f0f12] border border-gray-800 rounded-[2.5rem] flex flex-col shadow-2xl m-auto max-h-[90vh] overflow-hidden"
                 onClick={e => e.stopPropagation()}
               >
               <div className="p-6 border-b border-gray-800 flex items-center justify-between shrink-0">
@@ -5208,7 +5250,7 @@ export default function App() {
                   <X size={18} />
                 </button>
               </div>
-              <div className="p-6 space-y-4 overflow-visible custom-scrollbar max-h-[70vh]">
+              <div className="p-6 pb-10 space-y-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-gray-500">Quest Title</label>
                   <input 
@@ -5394,7 +5436,7 @@ export default function App() {
                                 initial={{ opacity: 0, scale: 0.95, y: -10 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                className="absolute top-full left-0 right-[-50px] md:right-[-150px] mt-3 bg-[#16161a] border border-blue-500/20 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden z-[100] max-h-56 overflow-y-auto custom-scrollbar backdrop-blur-2xl"
+                                className="absolute top-full left-0 w-[calc(200%+0.75rem)] mt-3 bg-[#16161a] border border-blue-500/20 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] z-[100] max-h-56 overflow-y-auto custom-scrollbar backdrop-blur-2xl"
                               >
                             <div className="p-2 space-y-1">
                               {categories.flatMap(c => c.skills).filter(s => s.isUnlocked).map(skill => (

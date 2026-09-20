@@ -15,6 +15,7 @@ android/app/release/
 android/captive-portal/
 android/local.properties
 android/.idea/
+android/app/src/main/res/raw/lifequest_reminder.wav
 *.apk
 *.aab
 *.ipa
@@ -23,6 +24,8 @@ android/.idea/
 *.jks
 mobile-release/
 site/
+# Obsolete partial scaffold; the complete Capacitor project lives at ios-native/.
+ios/
 ios/vendor/
 ios/.bundle/
 ios/fastlane/report.xml

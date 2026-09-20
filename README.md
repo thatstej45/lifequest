@@ -48,17 +48,35 @@ The app repo is [thatstej45/lifequest](https://github.com/thatstej45/lifequest).
    `https://thatstej45.github.io/lifequest/` is the live app and
    `https://raw.githubusercontent.com/thatstej45/lifequest/gh-pages/update.json` is the Android update channel
 3. Builds a debug APK artifact you can sideload when native code changes
+4. Compiles and uploads an unsigned iOS simulator app to validate the native iOS project
 
 After the APK that includes the live-update plugin is installed once, later UI/logic pushes update the phone automatically the next time the app is opened (or brought back to the foreground). Native changes (new plugins, permissions, icons) still need a fresh APK install.
 
-## Install on iPhone (home-screen web app)
+## Native iPhone app
 
-iOS has no sideloading, so the same web app installs as a PWA instead. Chrome on iOS cannot do this — it must be Safari.
+The native Capacitor project lives in `ios-native/`. Native iOS is required for
+reliable scheduled quest reminders while LifeQuest is backgrounded or closed;
+the home-screen web app cannot provide that behavior without a remote Web Push
+service.
 
-1. Open `https://thatstej45.github.io/lifequest/` in **Safari**
-2. Tap **Share**
-3. Tap **Add to Home Screen**, then **Add**
+1. `npm install`
+2. `npm run ios:sync`
+3. `npm run ios:open`
+4. Select an Apple development team and a physical iPhone in Xcode, then Run
 
-It then launches full-screen with its own icon, keeps working offline, and picks up new deploys on the next launch. Data lives on that device only; it does not sync with the Android install.
+Quest reminders are scheduled on-device, so they do not require a push server.
+iOS delivers them to Notification Center even when the app is not running.
+TestFlight/App Store distribution still requires Apple signing credentials and
+an App Store Connect app for bundle ID `com.lifequest.app`.
+
+Every push to `main` also builds the iOS app for the simulator in CI. That
+unsigned simulator artifact validates the native project but cannot be installed
+on a physical iPhone.
+
+## Optional iPhone home-screen web app
+
+The web app can still be installed from Safari via **Share → Add to Home
+Screen**. It runs full-screen and offline, but use the native app when reliable
+background notifications are required.
 
 Repo **Settings → Pages** must be set to deploy from the `gh-pages` branch (root) for this URL to work. The build uses relative asset paths, so it runs from the `/lifequest/` project path as well as a custom domain.

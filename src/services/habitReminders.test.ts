@@ -4,6 +4,8 @@ import {
   dueReminderTimes,
   normalizeReminderTime,
   notificationId,
+  QUEST_REMINDER_ACTION_TYPE,
+  QUEST_REMINDER_CHANNEL_ID,
 } from './habitReminders';
 
 const assert = (condition: boolean, message: string) => {
@@ -37,6 +39,8 @@ const daily = buildNativeSchedules(goal({ repeatType: 'daily', isRepeatable: tru
 assert(daily.length === 1, 'builds one daily notification');
 assert(daily[0].schedule.on?.hour === 9 && daily[0].schedule.repeats, 'daily reminder repeats at its time');
 assert(daily[0].sound === 'default' && daily[0].foreground, 'native reminder is audible and foreground-visible');
+assert(daily[0].channelId === QUEST_REMINDER_CHANNEL_ID, 'native reminder uses the quest reminder channel');
+assert(daily[0].actionTypeId === QUEST_REMINDER_ACTION_TYPE, 'native reminder includes system actions');
 
 const weekly = buildNativeSchedules(goal({
   repeatType: 'weekly',
