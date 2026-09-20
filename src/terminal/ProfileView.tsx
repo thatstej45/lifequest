@@ -327,6 +327,11 @@ export default function ProfileView({
                 [enable notifications]
               </button>
             )}
+            {notificationPermission === 'granted' && (
+              <button type="button" className="term-token is-action term-nested-action" onClick={onEnableNotifications}>
+                [reschedule reminders]
+              </button>
+            )}
             {notificationPermission === 'denied' && (
               <p className="term-comment is-nested">{`// blocked — enable in ${notificationBackend === 'native' ? 'android settings' : 'browser settings'}`}</p>
             )}

@@ -144,7 +144,7 @@ import { useNotificationPermission } from './hooks/useNotificationPermission';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { formatVersionLabel } from './liveUpdate';
 import {
-  normalizeReminderTime,
+  dueReminderTimes,
   registerNativeNotificationHandlers,
   shouldRemindGoal,
   showWebReminder,
@@ -1960,7 +1960,6 @@ export default function App() {
   const [settingsIdentityStatements, setSettingsIdentityStatements] = useState<string[]>(['', '', '']);
   const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
   const lastReminderRef = useRef<Record<string, string>>({}); // goalId -> HH:mm to avoid duplicate triggers
-  const lastCheckedMinute = useRef<string>("");
   const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
   const [isRadarChartCollapsed, setIsRadarChartCollapsed] = useState(true);
   const [isCategoryStatsCollapsed, setIsCategoryStatsCollapsed] = useState(true);
@@ -2693,9 +2692,6 @@ export default function App() {
       const now = new Date();
       const currentHHmm = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-      if (currentHHmm === lastCheckedMinute.current) return;
-      lastCheckedMinute.current = currentHHmm;
-
       const todayStr = dateKey(now);
       const progressByGoal = new Map(
         goalDailyProgress
@@ -2707,10 +2703,7 @@ export default function App() {
         const progress = progressByGoal.get(goal.id);
         if (!shouldRemindGoal(goal, progress, now, userStats.pauseMode ?? 'none')) return;
 
-        const scheduledTimes = (goal.reminderTimes ?? [])
-          .map(normalizeReminderTime)
-          .filter((value): value is string => Boolean(value));
-        if (!scheduledTimes.includes(currentHHmm)) return;
+        if (dueReminderTimes(goal, now).length === 0) return;
 
         const dayKey = `reminded-${goal.id}-${todayStr}`;
         if (goal.reminderFrequency === 'once' && lastReminderRef.current[dayKey]) return;
@@ -4257,6 +4250,20 @@ export default function App() {
                               className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
                             >
                               ENABLE
+                            </button>
+                          )}
+                          {notificationPermission === 'granted' && (
+                            <button
+                              onClick={async () => {
+                                await requestNotificationPermission();
+                                if (notificationBackend === 'native') {
+                                  await syncNativeHabitReminders(goals, userStats.pauseMode ?? 'none');
+                                }
+                                setNotification({ title: 'System Info', message: 'Reminders rescheduled', xp: 0 });
+                              }}
+                              className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black rounded-lg shadow-lg active:scale-95 transition-all"
+                            >
+                              RESCHEDULE
                             </button>
                           )}
                         </div>
