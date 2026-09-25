@@ -1,4 +1,5 @@
 import type { HistoryRecord } from '../types';
+import { habitDayDate } from '../dayBoundary';
 import { getPreviousWindowRange, getWindowRange, isDateInRange } from './dateUtils';
 import type { AnalyticsWindow, WindowPreset } from './types';
 
@@ -13,7 +14,7 @@ export const ANALYTICS_WINDOWS: WindowPreset[] = [
 export const filterHistoryByWindow = (
   records: HistoryRecord[],
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ) => {
   const range = getWindowRange(window, referenceDate);
   return records
@@ -24,7 +25,7 @@ export const filterHistoryByWindow = (
 export const splitCurrentAndPrevious = (
   records: HistoryRecord[],
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ) => {
   const currentRange = getWindowRange(window, referenceDate);
   const previousRange = getPreviousWindowRange(window, referenceDate);

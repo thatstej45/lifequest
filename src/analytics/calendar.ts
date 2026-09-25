@@ -1,4 +1,5 @@
 import type { HistoryRecord } from '../types';
+import { habitDayDate } from '../dayBoundary';
 import { parseISODate, toISODate } from './dateUtils';
 import { completionRatio } from './ratios';
 import type { CalendarCell, CalendarCellState } from './types';
@@ -23,7 +24,7 @@ export const buildMonthCalendar = (
   records: HistoryRecord[],
   year: number,
   month: number,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): CalendarCell[] => {
   const byDate = historyByDate(records);
   const today = toISODate(referenceDate);

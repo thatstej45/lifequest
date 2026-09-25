@@ -1,4 +1,5 @@
 import type { AnalyticsWindow, DateRange } from './types';
+import { habitDayDate } from '../dayBoundary';
 
 export const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
@@ -38,7 +39,7 @@ export const windowDayCount = (window: AnalyticsWindow) =>
 
 export const getWindowRange = (
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): DateRange => {
   const end = toISODate(referenceDate);
   if (window === 'all') return { start: '0000-01-01', end };
@@ -49,7 +50,7 @@ export const getWindowRange = (
 
 export const getPreviousWindowRange = (
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): DateRange | null => {
   if (window === 'all') return null;
 

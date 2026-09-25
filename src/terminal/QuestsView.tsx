@@ -5,6 +5,7 @@ import {
   dateKey,
   dailyGoalSummary,
   effectiveProgressValue,
+  habitDayDate,
   formatImplementationIntention,
   habitProgressPercent,
   HabitAction,
@@ -92,8 +93,8 @@ function WeekStrip({
   weekOffset: number;
   onShiftWeek: (delta: number) => void;
 }) {
-  const today = toISODate(new Date());
-  const weekStart = startOfWeek(new Date(), weekOffset);
+  const today = dateKey();
+  const weekStart = startOfWeek(habitDayDate(), weekOffset);
   const byDate = new Map(history.map(record => [record.date, record]));
 
   const days = Array.from({ length: 7 }, (_, index) => {
@@ -607,8 +608,8 @@ export default function QuestsView({
   }, [pendingEditGoalId, goals, onClearPendingEdit]);
 
   const now = new Date();
-  const today = toISODate(now);
-  const weekday = now.getDay();
+  const today = dateKey(now);
+  const weekday = habitDayDate(now).getDay();
   const progressMap = useMemo(
     () => new Map(goalDailyProgress.filter(item => item.date === today).map(item => [item.goalId, item])),
     [goalDailyProgress, today],

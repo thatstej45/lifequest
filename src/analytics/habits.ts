@@ -1,4 +1,5 @@
 import { isGoalScheduled, isHabitComplete, trackingMode } from '../habits/habitDomain';
+import { habitDayDate } from '../dayBoundary';
 import type { Goal, GoalDailyProgress, HistoryRecord } from '../types';
 import { addDays, eachDateInRange, getWindowRange, parseISODate, startOfWeek, toISODate } from './dateUtils';
 import type {
@@ -20,7 +21,7 @@ const historyByDate = (records: HistoryRecord[]) =>
 
 const isTrackableGoal = (goal: Goal) => trackingMode(goal) !== 'health';
 
-const datesForWindow = (window: AnalyticsWindow, referenceDate = new Date()) =>
+const datesForWindow = (window: AnalyticsWindow, referenceDate = habitDayDate()) =>
   eachDateInRange(getWindowRange(window, referenceDate));
 
 const longestConsecutiveRun = (dates: string[]) => {
@@ -60,7 +61,7 @@ export const perHabitSummary = (
   goals: Goal[],
   progress: GoalDailyProgress[],
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): HabitSummary[] => {
   const byProgress = progressByGoalDate(progress);
   const dates = datesForWindow(window, referenceDate);
@@ -120,7 +121,7 @@ export const buildWeeklyHabitMatrix = (
   goals: Goal[],
   progress: GoalDailyProgress[],
   history: HistoryRecord[] = [],
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
   weekOffset = 0,
 ): WeeklyHabitMatrixData => {
   const weekStartDate = startOfWeek(referenceDate, weekOffset);

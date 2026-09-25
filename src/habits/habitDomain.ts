@@ -1,4 +1,7 @@
 import { Goal, GoalDailyProgress, HistoryRecord, Routine, UserStats } from '../types';
+import { habitDayDate, habitDayKey } from '../dayBoundary';
+
+export { DAY_START_HOUR, habitDayDate, msUntilNextDayStart } from '../dayBoundary';
 
 export const HABIT_DATA_VERSION = 4;
 
@@ -14,10 +17,11 @@ export type HabitAction =
   | { type: 'reset' }
   | { type: 'two-minute' };
 
-export const dateKey = (date = new Date()) => {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
-};
+export const dateKey = (date = new Date()) => habitDayKey(date);
+
+/** `lastCompletedAt` is a day key on current data and an ISO timestamp on legacy rows. */
+export const completionDayKey = (value: string) =>
+  value.includes('T') ? dateKey(new Date(value)) : value.slice(0, 10);
 
 export const progressId = (goalId: string, date: string) => `${goalId}:${date}`;
 
@@ -182,7 +186,7 @@ export const applyHabitAction = (
 };
 
 export const isGoalScheduled = (goal: Goal, date = new Date()) => {
-  if (goal.repeatType === 'weekly') return Boolean(goal.repeatDays?.includes(date.getDay()));
+  if (goal.repeatType === 'weekly') return Boolean(goal.repeatDays?.includes(habitDayDate(date).getDay()));
   if (goal.repeatType === 'daily' || goal.isRepeatable) return true;
   return !goal.completed;
 };

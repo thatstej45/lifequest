@@ -1,4 +1,5 @@
 import { Category, Goal, HistoryRecord } from '../types';
+import { habitDayKey } from '../dayBoundary';
 
 export const WEEK_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -104,7 +105,7 @@ export const completedTimeToday = (goal: Goal, today: string) => {
   if (!goal.completed || !goal.lastCompletedAt) return null;
   const stamp = new Date(goal.lastCompletedAt);
   if (Number.isNaN(stamp.getTime())) return null;
-  if (toISODate(stamp) !== today) return null;
+  if (habitDayKey(stamp) !== today) return null;
   if (!goal.lastCompletedAt.includes('T')) return null;
   return `${String(stamp.getHours()).padStart(2, '0')}:${String(stamp.getMinutes()).padStart(2, '0')}`;
 };

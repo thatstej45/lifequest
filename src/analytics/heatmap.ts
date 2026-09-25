@@ -1,4 +1,5 @@
 import type { HistoryRecord } from '../types';
+import { habitDayDate } from '../dayBoundary';
 import { eachDateInRange, getWindowRange } from './dateUtils';
 import { completionRatio, ratioToLevel } from './ratios';
 import type { AnalyticsWindow, HeatmapCell } from './types';
@@ -6,7 +7,7 @@ import type { AnalyticsWindow, HeatmapCell } from './types';
 export const buildHeatmapCells = (
   records: HistoryRecord[],
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): HeatmapCell[] => {
   const byDate = new Map(records.map(record => [record.date, record]));
   const range = getWindowRange(window, referenceDate);

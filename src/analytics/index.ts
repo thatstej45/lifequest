@@ -11,6 +11,7 @@ export * from './habits';
 export * from './trajectory';
 
 import type { HistoryRecord } from '../types';
+import { habitDayDate } from '../dayBoundary';
 import { comparePeriods } from './deltas';
 import { buildHeatmapCells } from './heatmap';
 import { buildWeeklyHabitMatrix, perHabitSummary } from './habits';
@@ -24,7 +25,7 @@ import type { AnalyticsHabitInput, AnalyticsHistoryInput, AnalyticsWindow } from
 export const buildHistoryAnalytics = ({
   history,
   window = 30,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 }: AnalyticsHistoryInput) => {
   const scoped = filterHistoryByWindow(history, window, referenceDate);
   const { current, previous } = splitCurrentAndPrevious(history, window, referenceDate);
@@ -48,7 +49,7 @@ export const buildHabitAnalytics = ({
   progress,
   history = [],
   window = 30,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 }: AnalyticsHabitInput) => ({
   window,
   summaries: perHabitSummary(goals, progress, window, referenceDate),

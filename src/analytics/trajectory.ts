@@ -2,6 +2,7 @@ import type { HistoryRecord } from '../types';
 import { averageCompletionRatio } from './ratios';
 import { getWindowRange, isDateInRange, toISODate, addDays } from './dateUtils';
 import type { AnalyticsWindow } from './types';
+import { habitDayDate } from '../dayBoundary';
 
 export type TrendDirection = 'up' | 'down' | 'flat';
 
@@ -26,7 +27,7 @@ const directionFromDelta = (delta: number): TrendDirection => {
 const ratioForDays = (
   records: HistoryRecord[],
   days: number,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ) => {
   const end = toISODate(referenceDate);
   const start = toISODate(addDays(referenceDate, -(days - 1)));
@@ -41,7 +42,7 @@ const ratioForDays = (
 const ratioForWindow = (
   records: HistoryRecord[],
   window: AnalyticsWindow,
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ) => {
   const range = getWindowRange(window, referenceDate);
   const scoped = records.filter(record => isDateInRange(record.date, range));
@@ -51,7 +52,7 @@ const ratioForWindow = (
 /** Rolling completion rates for 7/14/30-day windows plus trend vs prior 7 days. */
 export const trajectorySnapshot = (
   history: HistoryRecord[],
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): TrajectorySnapshot => {
   const windows: RollingRate[] = [7, 14, 30].map(days => ratioForDays(history, days, referenceDate));
 

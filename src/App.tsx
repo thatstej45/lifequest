@@ -106,7 +106,10 @@ import {
 } from './progression';
 import {
   applyHabitAction,
+  completionDayKey,
   dateKey,
+  habitDayDate,
+  msUntilNextDayStart,
   dailyGoalSummary,
   emptyProgress,
   effectiveProgressValue,
@@ -1664,9 +1667,6 @@ export default function App() {
               maxXp: playerProgress.maxXp,
               xpMultiplier: streakMultiplier(savedStats.streak),
               progressionVersion: PROGRESSION_VERSION,
-              lastLoginDate: savedStats.lastLoginDate === new Date().toISOString().slice(0, 10)
-                ? dateKey()
-                : savedStats.lastLoginDate,
               habitDataVersion: HABIT_DATA_VERSION,
               dailyGoalTarget: savedStats.dailyGoalTarget ?? 60,
               streakShields: savedStats.streakShields ?? 0,
@@ -1699,9 +1699,6 @@ export default function App() {
           } else {
             setUserStats({
               ...savedStats,
-              lastLoginDate: savedStats.lastLoginDate === new Date().toISOString().slice(0, 10)
-                ? dateKey()
-                : savedStats.lastLoginDate,
               habitDataVersion: HABIT_DATA_VERSION,
               dailyGoalTarget: savedStats.dailyGoalTarget ?? 60,
               streakShields: savedStats.streakShields ?? 0,
@@ -1788,8 +1785,13 @@ export default function App() {
 
   const [expandedSkillId, setExpandedSkillId] = useState<string | null>(null);
 
-  const currentDay = new Date().getDay();
+  const currentDay = habitDayDate().getDay();
   const dayChangeProcessingRef = useRef<string | null>(null);
+  const lastLoginRef = useRef(userStats.lastLoginDate);
+
+  useEffect(() => {
+    lastLoginRef.current = userStats.lastLoginDate;
+  }, [userStats.lastLoginDate]);
 
   const checkDayChange = useCallback(() => {
     if (!isLoaded) return;
@@ -1800,6 +1802,14 @@ export default function App() {
       const rolloverKey = `${lastLogin}->${today}`;
       if (dayChangeProcessingRef.current === rolloverKey) return;
       dayChangeProcessingRef.current = rolloverKey;
+
+      // The 03:00 cutoff (or a clock change) can move the key backwards. That is
+      // not a finished day, so adopt it without touching streaks or penalties.
+      if (lastLogin > today) {
+        setUserStats(curr => ({ ...curr, lastLoginDate: today }));
+        return;
+      }
+
       const previousRecord = history.find(record => record.date === lastLogin);
       const previousSummary = dailyGoalSummary(
         goals,
@@ -1847,7 +1857,7 @@ export default function App() {
             return { ...goal, completed: false, streak: newStreak };
           }
           
-          if (isWeekly && goal.repeatDays?.includes(new Date().getDay())) {
+          if (isWeekly && goal.repeatDays?.includes(habitDayDate().getDay())) {
             return { ...goal, completed: false };
           }
           
@@ -1894,6 +1904,19 @@ export default function App() {
 
   useEffect(() => {
     checkDayChange();
+  }, [checkDayChange]);
+
+  // Phones freeze timers in the background, so re-check the cutoff on resume.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkDayChange();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, [checkDayChange]);
 
   const [activeTab, setActiveTab] = useState<AppTab>('home');
@@ -2505,7 +2528,7 @@ export default function App() {
       if (!goal.lastCompletedAt) newStreak = 1;
       else {
         const diffDays = Math.floor(
-          (new Date(`${today}T12:00:00`).getTime() - new Date(`${goal.lastCompletedAt.slice(0, 10)}T12:00:00`).getTime()) / 86_400_000,
+          (new Date(`${today}T12:00:00`).getTime() - new Date(`${completionDayKey(goal.lastCompletedAt)}T12:00:00`).getTime()) / 86_400_000,
         );
         if (diffDays === 1) newStreak += 1;
         else if (diffDays > 1) newStreak = 1;
@@ -2779,33 +2802,36 @@ export default function App() {
       .then(result => setWebPushActive(result.synced));
   }, [goals, isLoaded, notificationBackend, notificationPermission, userStats.pauseMode]);
 
-  // Reset repeatable quests daily and apply penalties
+  // Safety net for repeatable quests whose completed flag outlived its habit day.
   useEffect(() => {
-    const checkDailyReset = () => {
-      const now = new Date();
-      const today = dateKey(now);
-      
+    const clearStaleCompletions = () => {
+      const today = dateKey();
+      // The rollover owns streaks and history, so only tidy up once it has run.
+      if (lastLoginRef.current !== today) return;
+
       setGoals(prev => {
-        let consistencyPenalty = 0;
-        const categoryPenalties: Record<string, number> = {};
-
-        const updatedGoals = prev.map(g => {
-          if (g.isRepeatable && g.lastCompletedAt) {
-            const lastDate = g.lastCompletedAt.split('T')[0];
-            if (lastDate !== today) {
-              return { ...g, completed: false };
-            }
-          }
-          return g;
+        let changed = false;
+        const next = prev.map(goal => {
+          if (!goal.completed || !goal.isRepeatable || !goal.lastCompletedAt) return goal;
+          if (completionDayKey(goal.lastCompletedAt) === today) return goal;
+          changed = true;
+          return { ...goal, completed: false };
         });
-
-        return updatedGoals;
+        return changed ? next : prev;
       });
     };
 
-    checkDailyReset();
-    const interval = setInterval(checkDailyReset, 1000 * 60 * 60); // Check every hour
-    return () => clearInterval(interval);
+    clearStaleCompletions();
+    let interval: number | undefined;
+    const timeout = window.setTimeout(() => {
+      clearStaleCompletions();
+      interval = window.setInterval(clearStaleCompletions, 24 * 60 * 60 * 1000);
+    }, msUntilNextDayStart());
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (interval) window.clearInterval(interval);
+    };
   }, []);
 
   const handleTestSystemNotification = useCallback(async () => {

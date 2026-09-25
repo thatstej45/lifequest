@@ -1,4 +1,5 @@
 import type { HistoryRecord } from '../types';
+import { habitDayDate } from '../dayBoundary';
 import { monthLabel, toISODate } from './dateUtils';
 import { averageCompletionRatio } from './ratios';
 import type { MonthTrendPoint } from './types';
@@ -6,7 +7,7 @@ import type { MonthTrendPoint } from './types';
 /** One bar per calendar month for the six months ending at `referenceDate`. */
 export const sixMonthTrend = (
   records: HistoryRecord[],
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ): MonthTrendPoint[] => {
   const points: MonthTrendPoint[] = [];
 
@@ -31,7 +32,7 @@ export const sixMonthTrend = (
 
 export const trendFromDailyRatios = (
   records: HistoryRecord[],
-  referenceDate = new Date(),
+  referenceDate = habitDayDate(),
 ) => sixMonthTrend(records, referenceDate).map(point => ({
   ...point,
   endDate: toISODate(new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate())),
